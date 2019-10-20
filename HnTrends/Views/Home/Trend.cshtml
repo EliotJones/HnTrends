@@ -1,9 +1,25 @@
 ﻿@model TrendViewModel
-I display trends for: @Model.Term
+@{
+    ViewData["Title"] = $"Trend: {Model.Term}";
+}
 
-<input id="data-load" type="hidden" asp-for="Data"/>
+@if (Model.MaxCount == 0)
+{
+    <h3>No data in series</h3>
+    <p>There were no stories containing the term '@Model.Term' in the data series.</p>
+}
+else
+{
+    <h3>Data for '@Model.Term'</h3>
+    <div class="remark">Search term is case insensitive.</div>
+    <p>This shows the count of stories posted to HackerNews featuring the search term in the title or URL by day.</p>
+    <p>The data is not updated in real time. Currently the data runs between <em>@Model.From.ToShortDateString()</em> and <em>@Model.To.ToShortDateString()</em>.</p>
 
-<div id="plot" style="width:90%;height:600px; margin-top: 25px;"></div>
+    <input id="data-load" type="hidden" asp-for="Data" />
+    <button type="button" id="percent" onclick="togglePercent()">Display as % of daily stories</button>
+    <div id="plot" style="width: 90%; height: 600px;"></div>
+}
+
 
 @section Scripts {
     <script>
@@ -13,27 +29,86 @@ I display trends for: @Model.Term
             return result;
         }
 
-        $(function() {
-            console.log("hello world");
+        function loadDataFromHiddenInput() {
             var str = $("#data-load").val();
             var json = JSON.parse(str);
+            return json;
+        }
 
-            var counts = json.CountPerDay;
-            var start = Date.parse(json.Start);
-            var dates = [];
+        function buildXAxis(data) {
+            return {
+                range: [data.Start, addDays(Date.parse(data.End), 1)],
+                type: 'date',
+                linecolor: '#333',
+                linewidth: 1,
+                title: 'Day'
+            };
+        }
 
-            for (var i = 0; i < counts.length; i++) {
-                dates.push(addDays(start, i));
+        function buildYAxis(data, isCount) {
+            return {
+                range: [0, data.CountMax + 1],
+                linecolor: '#333',
+                linewidth: 1,
+                title: isCount ? '# of stories' : '% of total stories'
+            };
+        }
+
+        function getPlotlyLayout(data, isCount) {
+            return {
+                xaxis: buildXAxis(data),
+                yaxis: buildYAxis(data, isCount),
+                title:'Posts over time for \'@Model.Term\'.',
+                hovermode: 'closest'
+            };
+        }
+
+        function getModeBarSettings() {
+            return { modeBarButtonsToRemove: ['toImage', 'pan2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines'] };
+        }
+
+        function getPlotlyData(data, isCount) {
+            return [
+                {
+                    x: data.Dates,
+                    y: isCount ? data.Counts : data.Percents,
+                    type: 'scatter',
+                    mode: 'markers'
+                }
+            ];
+        }
+
+        function getPlotlyElement() {
+            return document.getElementById('plot');
+        }
+
+        function togglePercent() {
+            var current = document.hntrendstore.isCount;
+            var isCount = !current;
+            $('#percent').text(isCount ? 'Display as % of total stories' : 'Display as # of stories');
+            document.hntrendstore.isCount = isCount;
+            var data = loadDataFromHiddenInput();
+            Plotly.newPlot(getPlotlyElement(),
+                getPlotlyData(data, isCount),
+                getPlotlyLayout(data, isCount),
+                getModeBarSettings());
+        }
+
+        $(function () {
+            if (!$('#data-load').length) {
+                return;
             }
 
-            var plot = document.getElementById('plot');
-            Plotly.plot(plot, [{
-                x: dates,
-                y: counts,
-                type: 'scatter',
-                mode: 'markers'
-            }], {
-                margin: { t: 0 } } );
+            document.hntrendstore = {
+                isCount: true
+            };
+
+            var json = loadDataFromHiddenInput();
+
+            Plotly.plot(getPlotlyElement(),
+                getPlotlyData(json, true),
+                getPlotlyLayout(json, true),
+                getModeBarSettings());
         });
     </script>
 }

@@ -21,15 +21,23 @@ namespace HnTrends.Controllers
             return View();
         }
 
-        [HttpPost]
-        public IActionResult Trend(IndexViewModel index)
+        [HttpGet]
+        public IActionResult Trend(string id)
         {
-            var resultData = trendService.GetTrendDataForTerm(index.Term);
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                return BadRequest("Trend search term must have a value.");
+            }
+
+            var resultData = trendService.GetTrendDataForTerm(id);
 
             return View(new TrendViewModel
             {
-                Term = index.Term,
-                Data = JsonConvert.SerializeObject(resultData)
+                Term = id,
+                Data = JsonConvert.SerializeObject(resultData),
+                To = resultData.End,
+                From = resultData.Start,
+                MaxCount = resultData.CountMax
             });
         }
 

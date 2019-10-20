@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
     using System.IO;
+    using System.Linq;
 
     public class TrendService : ITrendService
     {
@@ -27,9 +28,10 @@
                 }
 
                 var files = Directory.GetFiles(dataDirectory);
-
+                
                 var urls = new HashSet<string>();
                 var counts = new Dictionary<DateTime, int>();
+                var dateTotals = new Dictionary<DateTime, int>();
 
                 var min = DateTime.MaxValue;
                 var max = DateTime.MinValue;
@@ -51,6 +53,15 @@
                             if (entry.Title == null || entry.Url == null)
                             {
                                 continue;
+                            }
+
+                            if (!dateTotals.ContainsKey(entry.Date.Date))
+                            {
+                                dateTotals[entry.Date.Date] = 1;
+                            }
+                            else
+                            {
+                                dateTotals[entry.Date.Date]++;
                             }
 
                             if (entry.Date.Date < min)
@@ -86,28 +97,30 @@
                     }
                 }
 
-                var perDay = new List<int>();
-
-                var current = min;
-                while (current <= max)
+                var countMax = 0;
+                var countsNum = new List<int>(counts.Count);
+                var dates = new List<DateTime>(counts.Count);
+                var percents = new List<double>();
+                foreach (var pair in counts.OrderBy(x => x.Key))
                 {
-                    if (counts.TryGetValue(current, out var count))
-                    {
-                        perDay.Add(count);
-                    }
-                    else
-                    {
-                        perDay.Add(0);
-                    }
+                    countsNum.Add(pair.Value);
+                    dates.Add(pair.Key);
+                    percents.Add((pair.Value / (double)dateTotals[pair.Key]) * 100.0);
 
-                    current = current.AddDays(1);
+                    if (pair.Value > countMax)
+                    {
+                        countMax = pair.Value;
+                    }
                 }
 
                 var result = new DailyTrendData
                 {
-                    CountPerDay = perDay,
+                    Counts = countsNum,
+                    Dates = dates,
                     End = max,
-                    Start = min
+                    Start = min,
+                    CountMax = countMax,
+                    Percents = percents
                 };
 
                 cache[searchTerm] = result;
@@ -135,7 +148,13 @@
 
         public DateTime End { get; set; }
 
-        public List<int> CountPerDay { get; set; }
+        public List<double> Percents { get; set; }
+
+        public List<int> Counts { get; set; }
+
+        public int CountMax { get; set; }
+
+        public List<DateTime> Dates { get; set; }
     }
 
     public class DailyTotalData
