@@ -262,3 +262,4 @@ __pycache__/
 *.bin
 *.min.js
 *.min.css
+*.sqlite

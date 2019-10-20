@@ -5,11 +5,17 @@ using System.Linq;
 
 namespace Reader
 {
+    using System.Data.SQLite;
+
     public class Program
     {
 
         public static void Main(string[] args)
         {
+            Console.WriteLine("Press 1 to write to CSV or 2 to write to SQLite.");
+
+            var mode = Console.ReadKey().KeyChar;
+
             var entries = new List<Entry>();
 
             entries.AddRange(ReadFile(@"C:\git\csharp\hn-reader\hn.bin"));
@@ -31,55 +37,110 @@ namespace Reader
             var min = entries[0].Date.Date;
             var max = entries[entries.Count - 1].Date.Date;
 
-            var index = 0;
-
-            var urlsSet = new HashSet<string>();
-            var dateCounts = new Dictionary<DateTime, int>();
-            var recessionCounts = new Dictionary<DateTime, int>();
-            var teslaCounts = new Dictionary<DateTime, int>();
-
-            while (min < max)
+            if (mode == '1')
             {
-                dateCounts[min] = 0;
-                recessionCounts[min] = 0;
-                teslaCounts[min] = 0;
+                Console.WriteLine("Writing to file.");
 
-                for (int i = index; i < entries.Count; i++)
+                var index = 0;
+
+                var urlsSet = new HashSet<string>();
+                var dateCounts = new Dictionary<DateTime, int>();
+                var recessionCounts = new Dictionary<DateTime, int>();
+                var teslaCounts = new Dictionary<DateTime, int>();
+
+                while (min < max)
                 {
-                    var e = entries[i];
+                    dateCounts[min] = 0;
+                    recessionCounts[min] = 0;
+                    teslaCounts[min] = 0;
 
-                    if (e.Date.Date > min.Date)
+                    for (int i = index; i < entries.Count; i++)
                     {
-                        break;
+                        var e = entries[i];
+
+                        if (e.Date.Date > min.Date)
+                        {
+                            break;
+                        }
+
+                        if (e.Title != null && e.Title.IndexOf("recession", StringComparison.OrdinalIgnoreCase) >= 0
+                                            && e.Url != null && !urlsSet.Contains(e.Url))
+                        {
+                            urlsSet.Add(e.Url);
+                            recessionCounts[min]++;
+                        }
+
+                        if (e.Title?.IndexOf("tesla", StringComparison.OrdinalIgnoreCase) >= 0 && e.Url != null)
+                        {
+                            teslaCounts[min]++;
+                        }
+
+                        dateCounts[min]++;
+                        index++;
                     }
 
-                    if (e.Title != null && e.Title.IndexOf("recession", StringComparison.OrdinalIgnoreCase) >= 0
-                        && e.Url != null && !urlsSet.Contains(e.Url))
-                    {
-                        urlsSet.Add(e.Url);
-                        recessionCounts[min]++;
-                    }
-
-                    if (e.Title?.IndexOf("tesla", StringComparison.OrdinalIgnoreCase) >= 0 && e.Url != null)
-                    {
-                        teslaCounts[min]++;
-                    }
-
-                    dateCounts[min]++;
-                    index++;
+                    min = min.AddDays(1);
                 }
 
-                min = min.AddDays(1);
+                using (var file = File.OpenWrite(@"C:\Temp\hn.csv"))
+                using (var writer = new StreamWriter(file))
+                {
+                    foreach (var date in dateCounts)
+                    {
+                        var dateStr = $"{date.Key.Year}-{date.Key.Month}-{date.Key.Day}";
+                        writer.WriteLine($"{dateStr},{dateCounts[date.Key]},{recessionCounts[date.Key]},{teslaCounts[date.Key]}");
+                    }
+                }
             }
-
-            using (var file = File.OpenWrite(@"C:\Temp\hn.csv"))
-            using (var writer = new StreamWriter(file))
+            else if (mode == '2')
             {
-                foreach (var date in dateCounts)
+                Console.WriteLine("Writing to SQLite");
+
+                const string filePath = @"C:\temp\hn-data.sqlite";
+                var isNew = !File.Exists(filePath);
+                using (var connection = new SQLiteConnection($"Data Source={filePath}"))
                 {
-                    var dateStr = $"{date.Key.Year}-{date.Key.Month}-{date.Key.Day}";
-                    writer.WriteLine($"{dateStr},{dateCounts[date.Key]},{recessionCounts[date.Key]},{teslaCounts[date.Key]}");
+                    connection.Open();
+                    if (isNew)
+                    {
+                        var createCommand = new SQLiteCommand(@"CREATE TABLE IF NOT EXISTS story (
+    id INTEGER PRIMARY KEY,
+    title TEXT NULL COLLATE NOCASE,
+    url TEXT NULL COLLATE NOCASE,
+    ticks INTEGER
+);
+
+CREATE INDEX ix_ticks ON story (ticks);", connection);
+
+                        createCommand.ExecuteNonQuery();
+                    }
+
+                    var num = 0;
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        foreach (var entry in entries)
+                        {
+                            var command = new SQLiteCommand(@"INSERT OR IGNORE INTO 
+story(id, title, url, ticks) VALUES(@id, @title, @url, @ticks);", connection);
+                            command.Parameters.AddWithValue("id", entry.Id);
+                            command.Parameters.AddWithValue("title", entry.Title);
+                            command.Parameters.AddWithValue("url", entry.Url);
+                            command.Parameters.AddWithValue("ticks", entry.Date.Ticks);
+
+                            command.ExecuteNonQuery();
+                            num++;
+
+                            if (num % 10_000 == 0)
+                            {
+                                Console.WriteLine($"Inserted {num} rows.");
+                            }
+                        }
+
+                        transaction.Commit();
+                    }
                 }
+
+                Console.WriteLine("Insert complete.");
             }
         }
 

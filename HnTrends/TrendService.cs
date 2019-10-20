@@ -2,167 +2,174 @@
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
+    using System.Data.Common;
+    using System.Data.SQLite;
     using System.Linq;
+    using System.Threading.Tasks;
+    using Microsoft.Extensions.Caching.Memory;
+    using Microsoft.Extensions.Options;
 
-    public class TrendService : ITrendService
+    public class TrendService : ITrendService, IDisposable
     {
         private static readonly object Locker = new object();
 
-        private readonly string dataDirectory = @"C:\git\csharp\hn-reader\";
+        private (DateTime min, DateTime max)? minmaxcache;
 
-        private readonly Dictionary<string, DailyTrendData> cache = new Dictionary<string, DailyTrendData>(StringComparer.OrdinalIgnoreCase);
+        private readonly IMemoryCache cache;
+        private readonly SQLiteConnection connection;
 
-        public DailyTrendData GetTrendDataForTerm(string searchTerm)
+        public TrendService(IOptions<FileLocations> fileLocationOptions, IMemoryCache cache)
         {
+            this.cache = cache ?? throw new ArgumentNullException(nameof(cache));
+            connection = new SQLiteConnection($"Data Source={fileLocationOptions.Value.Database}");
+            connection.Open();
+        }
+
+        public async Task<DailyTrendData> GetTrendDataForTermAsync(string searchTerm)
+        {
+            DateTime GetDateFromReader(DbDataReader reader, int ordinal)
+            {
+                return new DateTime(reader.GetInt64(ordinal));
+            }
+
             if (string.IsNullOrWhiteSpace(searchTerm))
             {
                 throw new ArgumentException();
             }
 
+            Dictionary<DateTime, int> totalsByDay;
+
             lock (Locker)
             {
-                if (cache.TryGetValue(searchTerm, out var cached))
+                if (cache.TryGetValue(searchTerm.ToLowerInvariant(), out DailyTrendData cached))
                 {
                     return cached;
                 }
 
-                var files = Directory.GetFiles(dataDirectory);
-                
-                var urls = new HashSet<string>();
-                var counts = new Dictionary<DateTime, int>();
-                var dateTotals = new Dictionary<DateTime, int>();
-
-                var min = DateTime.MaxValue;
-                var max = DateTime.MinValue;
-
-                foreach (var file in files)
+                if (!minmaxcache.HasValue)
                 {
-                    if (!file.EndsWith("hn-complete.bin") && Path.GetFileName(file) != "hn.bin")
+                    var minmaxCommand = new SQLiteCommand("SELECT MIN(ticks), MAX(ticks) FROM story;", connection);
+
+                    DateTime min = DateTime.MinValue;
+                    DateTime max = DateTime.MaxValue;
+                    using (var minmaxReader = minmaxCommand.ExecuteReader())
                     {
-                        continue;
-                    }
-                    
-                    using (var fileStream = File.OpenRead(file))
-                    using (var reader = new BinaryReader(fileStream))
-                    {
-                        while (fileStream.Position < fileStream.Length)
+                        while (minmaxReader.Read())
                         {
-                            var entry = Entry.Read(reader);
+                            min = GetDateFromReader(minmaxReader, 0);
+                            max = GetDateFromReader(minmaxReader, 1);
+                            break;
+                        }
+                    }
 
-                            if (entry.Title == null || entry.Url == null)
-                            {
-                                continue;
-                            }
+                    minmaxcache = (min, max);
+                }
 
-                            if (!dateTotals.ContainsKey(entry.Date.Date))
+                if (!cache.TryGetValue("daytotals", out totalsByDay))
+                {
+                    var totalsCommand = 
+                        new SQLiteCommand(@"SELECT ticks FROM story WHERE title IS NOT NULL AND url IS NOT NULL;", 
+                            connection);
+
+                    totalsByDay = new Dictionary<DateTime, int>();
+
+                    using (var totalsReader = totalsCommand.ExecuteReader())
+                    {
+                        while (totalsReader.Read())
+                        {
+                            var day = GetDateFromReader(totalsReader, 0).Date;
+
+                            if (!totalsByDay.ContainsKey(day))
                             {
-                                dateTotals[entry.Date.Date] = 1;
+                                totalsByDay[day] = 1;
                             }
                             else
                             {
-                                dateTotals[entry.Date.Date]++;
-                            }
-
-                            if (entry.Date.Date < min)
-                            {
-                                min = entry.Date.Date;
-                            }
-
-                            if (entry.Date.Date > max)
-                            {
-                                max = entry.Date.Date;
-                            }
-
-                            if (entry.Title.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) >= 0
-                                || entry.Url.IndexOf(searchTerm, StringComparison.OrdinalIgnoreCase) >= 0)
-                            {
-                                if (urls.Contains(entry.Url))
-                                {
-                                    continue;
-                                }
-
-                                if (!counts.ContainsKey(entry.Date.Date))
-                                {
-                                    counts[entry.Date.Date] = 1;
-                                }
-                                else
-                                {
-                                    counts[entry.Date.Date]++;
-                                }
-
-                                urls.Add(entry.Url);
+                                totalsByDay[day]++;
                             }
                         }
                     }
+
+                    cache.Set("daytotals", totalsByDay);
                 }
+            }
 
-                var countMax = 0;
-                var countsNum = new List<int>(counts.Count);
-                var dates = new List<DateTime>(counts.Count);
-                var percents = new List<double>();
-                foreach (var pair in counts.OrderBy(x => x.Key))
+            var urls = new HashSet<string>();
+            var counts = new Dictionary<DateTime, int>();
+
+            // TODO: SQLite nocase only supports ASCII.
+            var command = new SQLiteCommand(@"  SELECT url, ticks 
+                                                FROM story 
+                                                WHERE title IS NOT NULL
+                                                AND url IS NOT NULL 
+                                                AND (title LIKE @title OR url LIKE @url) 
+                                                ORDER BY ticks;", connection);
+
+            command.Parameters.AddWithValue("title", $"%{searchTerm}%");
+            command.Parameters.AddWithValue("url", $"%{searchTerm}%");
+
+            using (var reader = await command.ExecuteReaderAsync())
+            {
+                while (reader.Read())
                 {
-                    countsNum.Add(pair.Value);
-                    dates.Add(pair.Key);
-                    percents.Add((pair.Value / (double)dateTotals[pair.Key]) * 100.0);
+                    var url = reader.GetString(0);
+                    var date = new DateTime(reader.GetInt64(1));
 
-                    if (pair.Value > countMax)
+                    if (urls.Contains(url))
                     {
-                        countMax = pair.Value;
+                        continue;
+                    }
+
+                    urls.Add(url);
+                    
+                    if (!counts.ContainsKey(date.Date))
+                    {
+                        counts[date.Date] = 1;
+                    }
+                    else
+                    {
+                        counts[date.Date]++;
                     }
                 }
-
-                var result = new DailyTrendData
-                {
-                    Counts = countsNum,
-                    Dates = dates,
-                    End = max,
-                    Start = min,
-                    CountMax = countMax,
-                    Percents = percents
-                };
-
-                cache[searchTerm] = result;
-
-                return result;
             }
-        }
+            
+            var countMax = 0;
+            var countsNum = new List<int>(counts.Count);
+            var dates = new List<DateTime>(counts.Count);
+            var percents = new List<double>();
+            foreach (var pair in counts.OrderBy(x => x.Key))
+            {
+                countsNum.Add(pair.Value);
+                dates.Add(pair.Key);
+                percents.Add((pair.Value / (double)totalsByDay[pair.Key]) * 100.0);
 
-        public DailyTotalData GetDailyTotalData()
+                if (pair.Value > countMax)
+                {
+                    countMax = pair.Value;
+                }
+            }
+
+            var result = new DailyTrendData
+            {
+                Counts = countsNum,
+                Dates = dates,
+                Start = minmaxcache.Value.min,
+                End = minmaxcache.Value.max,
+                CountMax = countMax,
+                Percents = percents
+            };
+
+            lock (Locker)
+            {
+                cache.Set(searchTerm.ToLowerInvariant(), result);
+            }
+
+            return result;
+        }
+        
+        public void Dispose()
         {
-            throw new NotImplementedException();
+            connection.Dispose();
         }
-    }
-
-    public interface ITrendService
-    {
-        DailyTrendData GetTrendDataForTerm(string searchTerm);
-
-        DailyTotalData GetDailyTotalData();
-    }
-
-    public class DailyTrendData
-    {
-        public DateTime Start { get; set; }
-
-        public DateTime End { get; set; }
-
-        public List<double> Percents { get; set; }
-
-        public List<int> Counts { get; set; }
-
-        public int CountMax { get; set; }
-
-        public List<DateTime> Dates { get; set; }
-    }
-
-    public class DailyTotalData
-    {
-        public DateTime Start { get; set; }
-
-        public DateTime End { get; set; }
-
-        public ushort[] CountPerDay { get; set; }
     }
 }

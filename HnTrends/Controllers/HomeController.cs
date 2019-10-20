@@ -5,6 +5,7 @@ using HnTrends.Models;
 namespace HnTrends.Controllers
 {
     using System;
+    using System.Threading.Tasks;
     using Newtonsoft.Json;
 
     public class HomeController : Controller
@@ -22,14 +23,14 @@ namespace HnTrends.Controllers
         }
 
         [HttpGet]
-        public IActionResult Trend(string id)
+        public async Task<IActionResult> Trend(string id)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return BadRequest("Trend search term must have a value.");
             }
 
-            var resultData = trendService.GetTrendDataForTerm(id);
+            var resultData = await trendService.GetTrendDataForTermAsync(id);
 
             return View(new TrendViewModel
             {
@@ -44,7 +45,7 @@ namespace HnTrends.Controllers
         [HttpGet]
         public IActionResult TrendData(string term)
         {
-            var data = trendService.GetTrendDataForTerm(term);
+            var data = trendService.GetTrendDataForTermAsync(term);
 
             return Ok(data);
         }
