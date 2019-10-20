@@ -1,0 +1,39 @@
+﻿@model TrendViewModel
+I display trends for: @Model.Term
+
+<input id="data-load" type="hidden" asp-for="Data"/>
+
+<div id="plot" style="width:90%;height:600px; margin-top: 25px;"></div>
+
+@section Scripts {
+    <script>
+        function addDays(date, days) {
+            var result = new Date(date);
+            result.setDate(result.getDate() + days);
+            return result;
+        }
+
+        $(function() {
+            console.log("hello world");
+            var str = $("#data-load").val();
+            var json = JSON.parse(str);
+
+            var counts = json.CountPerDay;
+            var start = Date.parse(json.Start);
+            var dates = [];
+
+            for (var i = 0; i < counts.length; i++) {
+                dates.push(addDays(start, i));
+            }
+
+            var plot = document.getElementById('plot');
+            Plotly.plot(plot, [{
+                x: dates,
+                y: counts,
+                type: 'scatter',
+                mode: 'markers'
+            }], {
+                margin: { t: 0 } } );
+        });
+    </script>
+}

@@ -1,0 +1,14 @@
+﻿@model IndexViewModel
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+This will display the number of posts per day containing a given term.
+<hr/>
+
+<form asp-controller="Home" asp-action="Trend" method="post">
+    <label for="search">Enter a search term:</label>
+    <input asp-for="Term" type="text" min="2" id="search" />
+    <button type="submit">Search</button>
+</form>
+
