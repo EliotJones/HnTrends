@@ -35,28 +35,34 @@ else
             return json;
         }
 
-        function buildXAxis(data) {
+        function buildXAxis(data, isWeekly) {
+            var last = data.x[data.x.length - 1];
+            var max = isWeekly
+                ? last
+                : addDays(Date.parse(last), 1);
+
             return {
-                range: [data.Start, addDays(Date.parse(data.End), 1)],
+                range: [data.x[0], max],
                 type: 'date',
                 linecolor: '#333',
                 linewidth: 1,
-                title: 'Day'
+                title: isWeekly ? 'Week Ending' : 'Day'
             };
         }
 
         function buildYAxis(data, isCount) {
+            var max = Math.max.apply(Math, isCount ? data.y : data.yPercent);
             return {
-                range: [0, data.CountMax + 1],
+                range: [0, isCount ? (max + 1) : max + 0.1],
                 linecolor: '#333',
                 linewidth: 1,
                 title: isCount ? '# of stories' : '% of total stories'
             };
         }
 
-        function getPlotlyLayout(data, isCount) {
+        function getPlotlyLayout(data, isCount, isWeekly) {
             return {
-                xaxis: buildXAxis(data),
+                xaxis: buildXAxis(data, isWeekly),
                 yaxis: buildYAxis(data, isCount),
                 title:'Posts over time for \'@Model.Term\'.',
                 hovermode: 'closest'
@@ -67,13 +73,65 @@ else
             return { modeBarButtonsToRemove: ['toImage', 'pan2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines', 'select2d'] };
         }
 
-        function getPlotlyData(data, isCount) {
+        function getWeekLabelForDate(date) {
+            return moment(date).year() + '-' + moment(date).week();
+        }
+
+        function dataForPeriod(data, isWeekly) {
+            var dateLabels = [];
+            var yData = [];
+            var yPercentData = [];
+
+            var previous;
+            
+            data.Dates.forEach((x, i) => {
+                if (!isWeekly) {
+                    dateLabels.push(x);
+                    yData.push(data.Counts[i]);
+                    yPercentData.push((data.Counts[i] / data.DailyTotals[i]) * 100);
+                } else if (i === 0) {
+                    dateLabels.push(moment(x).endOf('week').toDate());
+                    yData.push(data.Counts[i]);
+                    yPercentData.push(data.DailyTotals[i]);
+
+                    previous = x;
+                } else {
+                    var weekLabel = getWeekLabelForDate(previous);
+                    var currentWeekLabel = getWeekLabelForDate(x);
+
+                    if (currentWeekLabel === weekLabel) {
+                        yData[yData.length - 1] += data.Counts[i];
+                        yPercentData[yPercentData.length - 1] += data.DailyTotals[i];
+                    } else {
+                        dateLabels.push(moment(x).endOf('week').toDate());
+                        yData.push(data.Counts[i]);
+                        yPercentData.push(data.DailyTotals[i]);
+                    }
+
+                    previous = x;
+                }
+            });
+
+            if (isWeekly) {
+                yData.forEach((x, i) => {
+                    yPercentData[i] = (x / yPercentData[i]) * 100;
+                });
+            }
+
+            return {
+                y: yData,
+                yPercent: yPercentData,
+                x: dateLabels
+            };
+        }
+
+        function getPlotlyData(data, isCount, isWeekly) {
             return [
                 {
-                    x: data.Dates,
-                    y: isCount ? data.Counts : data.Percents,
+                    x: data.x,
+                    y: isCount ? data.y : data.yPercent,
                     type: 'scatter',
-                    mode: 'markers'
+                    mode: isWeekly ? 'lines' : 'markers'
                 }
             ];
         }
@@ -85,15 +143,16 @@ else
         function togglePercent() {
             var current = document.hntrendstore.isCount;
             var isCount = !current;
+            var isWeekly = true;
             $('#percent').text(isCount ? 'Display as % of total stories' : 'Display as # of stories');
             document.hntrendstore.isCount = isCount;
-            var data = loadDataFromHiddenInput();
+            var data = dataForPeriod(loadDataFromHiddenInput(), isWeekly);
             Plotly.newPlot(getPlotlyElement(),
-                getPlotlyData(data, isCount),
-                getPlotlyLayout(data, isCount),
+                getPlotlyData(data, isCount, isWeekly),
+                getPlotlyLayout(data, isCount, isWeekly),
                 getModeBarSettings());
         }
-
+        
         $(function () {
             if (!$('#data-load').length) {
                 return;
@@ -105,9 +164,13 @@ else
 
             var json = loadDataFromHiddenInput();
 
+            var data = dataForPeriod(json, true);
+
+            console.log(data);
+
             Plotly.plot(getPlotlyElement(),
-                getPlotlyData(json, true),
-                getPlotlyLayout(json, true),
+                getPlotlyData(data, true, true),
+                getPlotlyLayout(data, true, true),
                 getModeBarSettings());
         });
     </script>

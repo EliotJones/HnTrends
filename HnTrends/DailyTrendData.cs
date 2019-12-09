@@ -9,9 +9,9 @@
 
         public DateTime End { get; set; }
 
-        public List<double> Percents { get; set; }
-
         public List<int> Counts { get; set; }
+
+        public List<int> DailyTotals { get; set; }
 
         public int CountMax { get; set; }
 

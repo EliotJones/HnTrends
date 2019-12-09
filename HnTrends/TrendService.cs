@@ -67,8 +67,8 @@
 
                 if (!cache.TryGetValue("daytotals", out totalsByDay))
                 {
-                    var totalsCommand = 
-                        new SQLiteCommand(@"SELECT ticks FROM story WHERE title IS NOT NULL AND url IS NOT NULL;", 
+                    var totalsCommand =
+                        new SQLiteCommand(@"SELECT ticks FROM story WHERE title IS NOT NULL AND url IS NOT NULL;",
                             connection);
 
                     totalsByDay = new Dictionary<DateTime, int>();
@@ -121,7 +121,7 @@
                     }
 
                     urls.Add(url);
-                    
+
                     if (!counts.ContainsKey(date.Date))
                     {
                         counts[date.Date] = 1;
@@ -132,20 +132,55 @@
                     }
                 }
             }
-            
+
+            if (counts.Count == 0)
+            {
+                return new DailyTrendData
+                {
+                    CountMax = 0,
+                    Counts = new List<int>(),
+                    DailyTotals = new List<int>(),
+                    Dates = new List<DateTime>()
+                };
+            }
+
+            var minDate = counts.Min(x => x.Key);
+            var maxDate = counts.Max(x => x.Key);
+
+            var daysInRange = (int)Math.Ceiling((maxDate - minDate).TotalDays);
+
             var countMax = 0;
             var countsNum = new List<int>(counts.Count);
+            var dailyTotals = new List<int>(counts.Count);
             var dates = new List<DateTime>(counts.Count);
-            var percents = new List<double>();
-            foreach (var pair in counts.OrderBy(x => x.Key))
-            {
-                countsNum.Add(pair.Value);
-                dates.Add(pair.Key);
-                percents.Add((pair.Value / (double)totalsByDay[pair.Key]) * 100.0);
 
-                if (pair.Value > countMax)
+            for (var i = 0; i <= daysInRange; i++)
+            {
+                var date = minDate.AddDays(i).Date;
+
+                dates.Add(date);
+
+                if (counts.TryGetValue(date, out var count))
                 {
-                    countMax = pair.Value;
+                    countsNum.Add(count);
+
+                    if (count > countMax)
+                    {
+                        countMax = count;
+                    }
+                }
+                else
+                {
+                    countsNum.Add(0);
+                }
+
+                if (totalsByDay.TryGetValue(date, out var total))
+                {
+                    dailyTotals.Add(total);
+                }
+                else
+                {
+                    dailyTotals.Add(0);
                 }
             }
 
@@ -156,7 +191,7 @@
                 Start = minmaxcache.Value.min,
                 End = minmaxcache.Value.max,
                 CountMax = countMax,
-                Percents = percents
+                DailyTotals = dailyTotals
             };
 
             lock (Locker)
@@ -166,7 +201,7 @@
 
             return result;
         }
-        
+
         public void Dispose()
         {
             connection.Dispose();
