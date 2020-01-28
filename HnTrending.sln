@@ -3,11 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.852
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{35F8F79C-897C-4285-AB51-284D23E91A9A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HnDataCrawler", "HnDataCrawler\HnDataCrawler.csproj", "{35F8F79C-897C-4285-AB51-284D23E91A9A}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Reader", "Reader\Reader.csproj", "{CAE94B18-8224-4926-81A0-A4A796C6C1B5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HnTrends", "HnTrends\HnTrends.csproj", "{718031FF-1833-4F30-AFFD-C308F9B8DEF2}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "HnTrends", "HnTrends\HnTrends.csproj", "{718031FF-1833-4F30-AFFD-C308F9B8DEF2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

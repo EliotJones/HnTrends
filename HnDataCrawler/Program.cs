@@ -1,35 +1,21 @@
-﻿using Newtonsoft.Json;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Net.Http;
-using System.Threading.Tasks;
-
-namespace ConsoleApp1
+﻿namespace HnDataCrawler
 {
+    using System;
+    using System.Collections.Generic;
+    using System.IO;
+    using System.Net.Http;
     using System.Threading;
-
-    public class HnItem
-    {
-        public int Id { get; set; }
-
-        public long Time { get; set; }
-
-        public string Title { get; set; }
-
-        public string Type { get; set; }
-
-        public string Url { get; set; }
-
-        public int[] Kids { get; set; }
-    }
+    using System.Threading.Tasks;
+    using Newtonsoft.Json;
 
     public static class Program
     {
-        private static readonly SemaphoreSlim semaphore = new SemaphoreSlim(3, 3);
-        private static readonly HttpClient client = new HttpClient()
+        private static readonly SemaphoreSlim Semaphore = new SemaphoreSlim(3, 3);
+
+        private static readonly HttpClient Client = new HttpClient()
         {
-            BaseAddress = new Uri("https://news.ycombinator.com/")
+            BaseAddress = new Uri("https://news.ycombinator.com/"),
+            Timeout = TimeSpan.FromMinutes(1)
         };
 
         public static async Task Main(string[] args)
@@ -45,9 +31,15 @@ namespace ConsoleApp1
 
             if (mode == 1)
             {
+                Console.WriteLine();
+                Console.WriteLine("Running to latest item.");
+                Console.WriteLine();
+
                 var toLatestPath = Path.Combine(fileDirectory, "hn.bin");
                 
-                var maxItem = int.Parse(await client.GetStringAsync("https://hacker-news.firebaseio.com/v0/maxitem.json"));
+                var maxItem = int.Parse(await Client.GetStringAsync("https://hacker-news.firebaseio.com/v0/maxitem.json"));
+
+                Console.WriteLine($"Highest item ID is: {maxItem}.");
 
                 await RunFile(toLatestPath, toLatestStartItem, maxItem, random);
             }
@@ -63,13 +55,13 @@ namespace ConsoleApp1
                     previousStartItem = nextStartItem;
                     nextStartItem -= binSize;
 
-                    await semaphore.WaitAsync();
+                    await Semaphore.WaitAsync();
 
                     var fileName = Path.Combine(fileDirectory, $"{nextStartItem}hn.bin");
 
                     if (File.Exists(Path.Combine(fileDirectory, $"{nextStartItem}hn-complete.bin")))
                     {
-                        semaphore.Release();
+                        Semaphore.Release();
                         continue;
                     }
 
@@ -91,7 +83,7 @@ namespace ConsoleApp1
             }
             finally
             {
-                semaphore.Release();
+                Semaphore.Release();
             }
         }
 
@@ -140,10 +132,11 @@ namespace ConsoleApp1
                     {
                         var url = $"https://hacker-news.firebaseio.com/v0/item/{currentItem}.json";
 
-                        var str = await client.GetStringAsync(url);
+                        var str = await Client.GetStringAsync(url);
 
-                        if (str == null)
+                        if (str == null || str == "null")
                         {
+                            currentItem++;
                             continue;
                         }
 
