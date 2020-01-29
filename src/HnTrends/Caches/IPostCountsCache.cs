@@ -1,4 +1,4 @@
-﻿namespace HnTrends
+﻿namespace HnTrends.Caches
 {
     internal interface IPostCountsCache
     {

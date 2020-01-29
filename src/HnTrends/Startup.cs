@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 namespace HnTrends
 {
     using System.Data.SQLite;
+    using Caches;
     using Indexer;
     using Microsoft.Extensions.Options;
 
@@ -45,6 +46,7 @@ namespace HnTrends
                 x.GetService<SQLiteConnection>()));
 
             services.AddSingleton<IPostCountsCache, PostCountsCache>();
+            services.AddSingleton<IStoryCountCache, StoryCountCache>();
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
         }

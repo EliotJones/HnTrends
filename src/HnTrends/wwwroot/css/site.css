@@ -39,3 +39,7 @@ nav {
         height: 25px;
         padding: 0 5px;
     }
+
+p {
+    margin-bottom: 1rem;
+}

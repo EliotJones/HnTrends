@@ -4,18 +4,22 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Threading.Tasks;
+    using Caches;
     using Indexer;
 
     internal class TrendService : ITrendService
     {
         private readonly IIndexManager indexManager;
         private readonly IPostCountsCache postCountsCache;
+        private readonly IStoryCountCache storyCountCache;
 
         public TrendService(IIndexManager indexManager,
-            IPostCountsCache postCountsCache)
+            IPostCountsCache postCountsCache,
+            IStoryCountCache storyCountCache)
         {
             this.indexManager = indexManager ?? throw new ArgumentNullException(nameof(indexManager));
-            this.postCountsCache = postCountsCache;
+            this.postCountsCache = postCountsCache ?? throw new ArgumentNullException(nameof(postCountsCache));
+            this.storyCountCache = storyCountCache ?? throw new ArgumentNullException(nameof(storyCountCache));
         }
 
         public Task<DailyTrendData> GetTrendDataForTermAsync(string searchTerm)
@@ -57,6 +61,11 @@
             };
 
             return Task.FromResult(result);
+        }
+
+        public int GetTotalStoryCount()
+        {
+            return storyCountCache.Get();
         }
     }
 }

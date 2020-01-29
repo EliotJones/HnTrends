@@ -1,4 +1,4 @@
-﻿namespace HnTrends
+﻿namespace HnTrends.Caches
 {
     using System;
     using System.Collections.Generic;

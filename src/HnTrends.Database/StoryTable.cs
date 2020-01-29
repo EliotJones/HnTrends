@@ -53,5 +53,12 @@ VALUES(@id, @title, @url, @time);",
                 }
             }
         }
+
+        public static int GetCount(SQLiteConnection connection)
+        {
+            var command = new SQLiteCommand($@"SELECT COUNT(*) FROM {Schema.StoryTable};", connection);
+
+            return (int)(long)command.ExecuteScalar();
+        }
     }
 }

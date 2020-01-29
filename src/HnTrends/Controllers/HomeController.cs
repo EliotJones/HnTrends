@@ -19,7 +19,12 @@ namespace HnTrends.Controllers
 
         public IActionResult Index()
         {
-            return View();
+            var vm = new IndexViewModel
+            {
+                StoryCount = trendService.GetTotalStoryCount()
+            };
+
+            return View(vm);
         }
 
         [HttpGet]
