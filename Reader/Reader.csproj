@@ -9,4 +9,8 @@
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.111" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\HnTrends.Indexer\HnTrends.Indexer.csproj" />
+  </ItemGroup>
+
 </Project>

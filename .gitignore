@@ -263,3 +263,6 @@ __pycache__/
 *.min.js
 *.min.css
 *.sqlite
+
+# Data
+Index/

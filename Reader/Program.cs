@@ -1,15 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-
-namespace Reader
+﻿namespace Reader
 {
+    using System;
+    using System.Collections.Generic;
     using System.Data.SQLite;
+    using System.IO;
+    using System.Linq;
 
     public class Program
     {
-
         public static void Main(string[] args)
         {
             Console.WriteLine("Press 1 to write to CSV or 2 to write to SQLite.");

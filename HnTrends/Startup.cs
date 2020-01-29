@@ -7,6 +7,10 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace HnTrends
 {
+    using System.Data.SQLite;
+    using Indexer;
+    using Microsoft.Extensions.Options;
+
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -29,6 +33,17 @@ namespace HnTrends
             services.Configure<FileLocations>(Configuration.GetSection("FileLocations"));
             services.AddMemoryCache();
             services.AddSingleton<ITrendService, TrendService>();
+            services.AddSingleton(x =>
+            {
+                var str = x.GetService<IOptions<FileLocations>>().Value.Database;
+                var conn = new SQLiteConnection($"Data Source={str}");
+                conn.Open();
+                return conn;
+            });
+
+            services.AddSingleton<IIndexManager>(x => new IndexManager(@"C:\git\csharp\hn-reader", @"C:\git\csharp\hn-reader\Index"));
+
+            services.AddSingleton<IPostCountsCache, PostCountsCache>();
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
         }
