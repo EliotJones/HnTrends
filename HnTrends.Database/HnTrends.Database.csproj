@@ -5,10 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Lucene.Net" Version="4.8.0-beta00007" />
-    <PackageReference Include="Lucene.Net.Analysis.Common" Version="4.8.0-beta00007" />
-    <PackageReference Include="Lucene.Net.QueryParser" Version="4.8.0-beta00007" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.112" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HnTrends.Core\HnTrends.Core.csproj" />
   </ItemGroup>
 
 </Project>
