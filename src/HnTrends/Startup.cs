@@ -33,20 +33,23 @@ namespace HnTrends
 
             services.Configure<FileLocations>(Configuration.GetSection("FileLocations"));
             services.AddMemoryCache();
-            services.AddSingleton<ITrendService, TrendService>();
+
             services.AddSingleton(x =>
             {
                 var str = x.GetService<IOptions<FileLocations>>().Value.Database;
                 var conn = new SQLiteConnection($"Data Source={str}");
-                conn.Open();
-                return conn;
+                return conn.OpenAndReturn();
             });
 
-            services.AddSingleton<IIndexManager>(x => new IndexManager(@"C:\git\csharp\hn-reader\index",
-                x.GetService<SQLiteConnection>()));
+            services.AddSingleton<IIndexManager>(x =>
+            {
+                var index = x.GetService<IOptions<FileLocations>>().Value.Index;
+                return new IndexManager(index, x.GetService<SQLiteConnection>());
+            });
 
             services.AddSingleton<IPostCountsCache, PostCountsCache>();
             services.AddSingleton<IStoryCountCache, StoryCountCache>();
+            services.AddSingleton<ITrendService, TrendService>();
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
         }

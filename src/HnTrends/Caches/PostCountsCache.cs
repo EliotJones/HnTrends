@@ -46,7 +46,7 @@
 
                 foreach (var entry in StoryTable.GetEntries(connection))
                 {
-                    var day = entry.Date;
+                    var day = entry.Date.Date;
 
                     if (!totalsByDay.ContainsKey(day))
                     {

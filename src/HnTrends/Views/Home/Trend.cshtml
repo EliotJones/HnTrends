@@ -12,17 +12,29 @@ else
 {
     <h3>Data for '@Model.Term'</h3>
     <div class="remark">Search term is case insensitive.</div>
-    <p>This shows the count of stories posted to HackerNews featuring the search term in the title or URL by day.</p>
+    <p>This shows the count of stories posted to HackerNews featuring the search term in the title or URL by <span id="period">Day</span>.</p>
     <p>The data is not updated in real time. Currently the data runs between <em>@Model.From.ToShortDateString()</em> and <em>@Model.To.ToShortDateString()</em>.</p>
 
     <input id="data-load" type="hidden" asp-for="Data" />
-    <button type="button" id="percent" onclick="togglePercent()">Display as % of daily stories</button>
+
+    <label for="period-selector" style="display: inline-block; margin-right: 25px;">
+        Group Data By:
+        <select id="period-selector" onchange="periodSelectorChanged()" style="width: 200px; margin-left: 25px; height: 36px;">
+            <option label="Day">Day</option>
+            <option label="Week">Week</option>
+            <option label="Month" selected>Month</option>
+        </select>
+    </label>
+
+    <button type="button" id="percent" onclick="togglePercent()">Display as % of stories</button>
     <div id="plot" style="width: 90%; height: 600px;"></div>
 }
 
 
 @section Scripts {
     <script>
+        var categories = ["Day", "Week", "Month"];
+
         function addDays(date, days) {
             var result = new Date(date);
             result.setDate(result.getDate() + days);
@@ -35,9 +47,9 @@ else
             return json;
         }
 
-        function buildXAxis(data, isWeekly) {
+        function buildXAxis(data, period) {
             var last = data.x[data.x.length - 1];
-            var max = isWeekly
+            var max = period !== "Day"
                 ? last
                 : addDays(Date.parse(last), 1);
 
@@ -46,7 +58,7 @@ else
                 type: 'date',
                 linecolor: '#333',
                 linewidth: 1,
-                title: isWeekly ? 'Week Ending' : 'Day'
+                title: period
             };
         }
 
@@ -60,9 +72,9 @@ else
             };
         }
 
-        function getPlotlyLayout(data, isCount, isWeekly) {
+        function getPlotlyLayout(data, isCount, period) {
             return {
-                xaxis: buildXAxis(data, isWeekly),
+                xaxis: buildXAxis(data, period),
                 yaxis: buildYAxis(data, isCount),
                 title:'Posts over time for \'@Model.Term\'.',
                 hovermode: 'closest'
@@ -73,47 +85,55 @@ else
             return { modeBarButtonsToRemove: ['toImage', 'pan2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines', 'select2d'] };
         }
 
-        function getWeekLabelForDate(date) {
-            return moment(date).year() + '-' + moment(date).week();
-        }
-
-        function dataForPeriod(data, isWeekly) {
+        function dataForPeriod(data, period) {
             var dateLabels = [];
             var yData = [];
             var yPercentData = [];
 
             var previous;
+            var dataRequiresFlattening = false;
             
             data.Dates.forEach((x, i) => {
-                if (!isWeekly) {
+                switch (period) {
+                    case "Week":
+                        dataRequiresFlattening = true;
+                        groupDataPointsByPeriod(data,
+                            x,
+                            i,
+                            dateLabels,
+                            yData,
+                            yPercentData,
+                            previous,
+                            x => moment(x).endOf('week').toDate());
+                        previous = x;
+                        break;
+                    case "Month":
+                        dataRequiresFlattening = true;
+                        groupDataPointsByPeriod(data,
+                            x,
+                            i,
+                            dateLabels,
+                            yData,
+                            yPercentData,
+                            previous,
+                            x => moment(x).startOf('month').toDate());
+                        previous = x;
+                        break;
+                case "Day":
+                default:
                     dateLabels.push(x);
                     yData.push(data.Counts[i]);
                     yPercentData.push((data.Counts[i] / data.DailyTotals[i]) * 100);
-                } else if (i === 0) {
-                    dateLabels.push(moment(x).endOf('week').toDate());
-                    yData.push(data.Counts[i]);
-                    yPercentData.push(data.DailyTotals[i]);
-
-                    previous = x;
-                } else {
-                    var weekLabel = getWeekLabelForDate(previous);
-                    var currentWeekLabel = getWeekLabelForDate(x);
-
-                    if (currentWeekLabel === weekLabel) {
-                        yData[yData.length - 1] += data.Counts[i];
-                        yPercentData[yPercentData.length - 1] += data.DailyTotals[i];
-                    } else {
-                        dateLabels.push(moment(x).endOf('week').toDate());
-                        yData.push(data.Counts[i]);
-                        yPercentData.push(data.DailyTotals[i]);
-                    }
-
-                    previous = x;
+                    break;
                 }
             });
 
-            if (isWeekly) {
+            if (dataRequiresFlattening) {
                 yData.forEach((x, i) => {
+                    if (yPercentData[i] === 0) {
+                        yPercentData[i] = 0;
+                        return;
+                    }
                     yPercentData[i] = (x / yPercentData[i]) * 100;
                 });
             }
@@ -125,13 +145,39 @@ else
             };
         }
 
-        function getPlotlyData(data, isCount, isWeekly) {
+        function groupDataPointsByPeriod(data, date, index, dateLabels, yData, yPercentData,
+            previous,
+            periodGrouper) {
+            var dayCount = data.Counts[index];
+            var dayTotal = data.DailyTotals[index];
+
+            var periodForThisDate = periodGrouper(date);
+
+            if (index === 0) {
+                dateLabels.push(periodForThisDate);
+                yData.push(dayCount);
+                yPercentData.push(dayTotal);
+            } else {
+                var periodForPreviousDate = periodGrouper(previous);
+
+                if (periodForThisDate.toDateString() === periodForPreviousDate.toDateString()) {
+                    yData[yData.length - 1] += dayCount;
+                    yPercentData[yPercentData.length - 1] += dayTotal;
+                } else {
+                    dateLabels.push(periodForThisDate);
+                    yData.push(dayCount);
+                    yPercentData.push(dayTotal);
+                }
+            }
+        }
+
+        function getPlotlyData(data, isCount, period) {
             return [
                 {
                     x: data.x,
                     y: isCount ? data.y : data.yPercent,
                     type: 'scatter',
-                    mode: isWeekly ? 'lines' : 'markers'
+                    mode: period !== "Day" ? 'lines' : 'markers'
                 }
             ];
         }
@@ -140,37 +186,65 @@ else
             return document.getElementById('plot');
         }
 
+        function periodSelectorChanged() {
+            var period = $("#period-selector").val();
+
+            if (categories.indexOf(period) < 0) {
+                return;
+            }
+
+            togglePeriod(period);
+        }
+
+        function togglePeriod(period) {
+            document.hntrendstore.CurrentCategory = period;
+
+            $("#period").text(period);
+
+            var isCount = document.hntrendstore.isCount;
+            var data = dataForPeriod(loadDataFromHiddenInput(), document.hntrendstore.CurrentCategory);
+            Plotly.newPlot(getPlotlyElement(),
+                getPlotlyData(data, isCount, document.hntrendstore.CurrentCategory),
+                getPlotlyLayout(data, isCount, document.hntrendstore.CurrentCategory),
+                getModeBarSettings());
+        }
+
         function togglePercent() {
             var current = document.hntrendstore.isCount;
             var isCount = !current;
-            var isWeekly = true;
+
             $('#percent').text(isCount ? 'Display as % of total stories' : 'Display as # of stories');
             document.hntrendstore.isCount = isCount;
-            var data = dataForPeriod(loadDataFromHiddenInput(), isWeekly);
+            var data = dataForPeriod(loadDataFromHiddenInput(), document.hntrendstore.CurrentCategory);
             Plotly.newPlot(getPlotlyElement(),
-                getPlotlyData(data, isCount, isWeekly),
-                getPlotlyLayout(data, isCount, isWeekly),
+                getPlotlyData(data, isCount, document.hntrendstore.CurrentCategory),
+                getPlotlyLayout(data, isCount, document.hntrendstore.CurrentCategory),
                 getModeBarSettings());
         }
         
         $(function () {
+
+            document.hntrendstore = {
+                isCount: true,
+                CurrentCategory: "Month"
+            };
+
             if (!$('#data-load').length) {
                 return;
             }
 
-            document.hntrendstore = {
-                isCount: true
-            };
+            $("#period").text(document.hntrendstore.CurrentCategory);
+
 
             var json = loadDataFromHiddenInput();
 
-            var data = dataForPeriod(json, true);
+            var data = dataForPeriod(json, document.hntrendstore.CurrentCategory);
 
             console.log(data);
 
             Plotly.plot(getPlotlyElement(),
-                getPlotlyData(data, true, true),
-                getPlotlyLayout(data, true, true),
+                getPlotlyData(data, true, document.hntrendstore.CurrentCategory),
+                getPlotlyLayout(data, true, document.hntrendstore.CurrentCategory),
                 getModeBarSettings());
         });
     </script>
