@@ -1,4 +1,4 @@
-﻿namespace HnDataCrawler
+﻿namespace HnTrends.ConsoleCrawler
 {
     public class HnItem
     {

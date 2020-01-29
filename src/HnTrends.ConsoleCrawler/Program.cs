@@ -1,4 +1,4 @@
-﻿namespace HnDataCrawler
+﻿namespace HnTrends.ConsoleCrawler
 {
     using System;
     using System.Collections.Generic;
