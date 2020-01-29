@@ -1,6 +1,6 @@
-﻿namespace HnTrends.ConsoleCrawler
+﻿namespace HnTrends.Crawler
 {
-    public class HnItem
+    internal class HnItem
     {
         public int Id { get; set; }
 

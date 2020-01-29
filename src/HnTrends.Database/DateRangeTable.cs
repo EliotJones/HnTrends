@@ -22,7 +22,7 @@ INSERT INTO {Schema.DateRangeTable} (first, last) VALUES (@from, @to);", connect
         {
             range = (DateTime.MinValue, DateTime.MaxValue);
 
-            var command = new SQLiteCommand($@"SELECT (first, last) FROM {Schema.DateRangeTable} LIMIT 1;", connection);
+            var command = new SQLiteCommand($@"SELECT first, last FROM {Schema.DateRangeTable} LIMIT 1;", connection);
 
             using (var reader = command.ExecuteReader())
             {
