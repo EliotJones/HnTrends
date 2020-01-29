@@ -13,10 +13,10 @@ CREATE TABLE IF NOT EXISTS story (
     id INTEGER PRIMARY KEY,
     title TEXT NULL COLLATE NOCASE,
     url TEXT NULL COLLATE NOCASE,
-    ticks INTEGER
+    time INTEGER
 );
 
-CREATE INDEX ix_ticks ON story (ticks);";
+CREATE INDEX ix_time ON story (time);";
 
         public const string VersionTable = "version";
         public const string LastWriteTable = "last_write";

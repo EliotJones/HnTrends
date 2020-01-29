@@ -41,7 +41,7 @@ namespace HnTrends
                 return conn;
             });
 
-            services.AddSingleton<IIndexManager>(x => new IndexManager(@"C:\git\csharp\hn-reader", @"C:\git\csharp\hn-reader\Index"));
+            services.AddSingleton<IIndexManager>(x => new IndexManager(@"C:\git\csharp\hn-reader\data", @"C:\git\csharp\hn-reader\index"));
 
             services.AddSingleton<IPostCountsCache, PostCountsCache>();
 

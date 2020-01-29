@@ -12,6 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\HnTrends.Core\HnTrends.Core.csproj" />
+    <ProjectReference Include="..\HnTrends.Database\HnTrends.Database.csproj" />
     <ProjectReference Include="..\HnTrends.Indexer\HnTrends.Indexer.csproj" />
   </ItemGroup>
 

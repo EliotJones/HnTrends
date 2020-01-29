@@ -3,8 +3,8 @@
     using System;
     using System.Collections.Generic;
     using System.Data;
-    using System.Data.Common;
     using System.Data.SQLite;
+    using Database;
     using Microsoft.Extensions.Caching.Memory;
 
     internal class PostCountsCache : IPostCountsCache
@@ -14,8 +14,7 @@
         private readonly IMemoryCache memoryCache;
         private readonly SQLiteConnection connection;
 
-        public PostCountsCache(IMemoryCache memoryCache,
-            SQLiteConnection connection)
+        public PostCountsCache(IMemoryCache memoryCache, SQLiteConnection connection)
         {
             this.memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
             this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
@@ -35,40 +34,27 @@
                     return cachedResult;
                 }
 
-                var minmaxCommand = new SQLiteCommand("SELECT MIN(ticks), MAX(ticks) FROM story;", connection);
-
-                var min = DateTime.MinValue;
-                var max = DateTime.MaxValue;
-                using (var minmaxReader = minmaxCommand.ExecuteReader())
+                if (!DateRangeTable.TryRead(connection, out var range))
                 {
-                    while (minmaxReader.Read())
-                    {
-                        min = GetDateFromReader(minmaxReader, 0);
-                        max = GetDateFromReader(minmaxReader, 1);
-                        break;
-                    }
+                    throw new InvalidOperationException("Empty date range table in SQLite database.");
                 }
 
-                var totalsCommand =
-                    new SQLiteCommand(@"SELECT ticks FROM story WHERE title IS NOT NULL AND url IS NOT NULL;",
-                        connection);
+                var min = range.from;
+                var max = range.to;
 
                 var totalsByDay = new Dictionary<DateTime, ushort>();
 
-                using (var totalsReader = totalsCommand.ExecuteReader())
+                foreach (var entry in StoryTable.GetEntries(connection))
                 {
-                    while (totalsReader.Read())
-                    {
-                        var day = GetDateFromReader(totalsReader, 0).Date;
+                    var day = entry.Date;
 
-                        if (!totalsByDay.ContainsKey(day))
-                        {
-                            totalsByDay[day] = 1;
-                        }
-                        else
-                        {
-                            totalsByDay[day]++;
-                        }
+                    if (!totalsByDay.ContainsKey(day))
+                    {
+                        totalsByDay[day] = 1;
+                    }
+                    else
+                    {
+                        totalsByDay[day]++;
                     }
                 }
 
@@ -91,18 +77,13 @@
 
                     current = current.AddDays(1);
                 }
-                
-                cachedResult = new PostCountsByDay(min, max, counts, days );
+
+                cachedResult = new PostCountsByDay(min, max, counts, days);
 
                 memoryCache.Set(nameof(PostCountsByDay), cachedResult);
 
                 return cachedResult;
             }
-        }
-
-        private static DateTime GetDateFromReader(DbDataReader reader, int ordinal)
-        {
-            return new DateTime(reader.GetInt64(ordinal));
         }
     }
 }
