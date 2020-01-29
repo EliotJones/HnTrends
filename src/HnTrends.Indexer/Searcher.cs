@@ -3,6 +3,7 @@
     using System;
     using Lucene.Net.Search;
     using System.Collections.Generic;
+    using Core;
     using Lucene.Net.Analysis;
     using Lucene.Net.QueryParsers.Classic;
     using Lucene.Net.Util;

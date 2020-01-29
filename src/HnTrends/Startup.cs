@@ -41,7 +41,8 @@ namespace HnTrends
                 return conn;
             });
 
-            services.AddSingleton<IIndexManager>(x => new IndexManager(@"C:\git\csharp\hn-reader\data", @"C:\git\csharp\hn-reader\index"));
+            services.AddSingleton<IIndexManager>(x => new IndexManager(@"C:\git\csharp\hn-reader\index",
+                x.GetService<SQLiteConnection>()));
 
             services.AddSingleton<IPostCountsCache, PostCountsCache>();
 

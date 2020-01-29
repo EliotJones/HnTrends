@@ -5,7 +5,8 @@
 
     internal static class Guard
     {
-        public static void CheckDirectoryValid(string directory, string propertyName)
+        public static void CheckDirectoryValid(string directory, string propertyName,
+            bool create)
         {
             if (directory == null)
             {
@@ -14,7 +15,12 @@
 
             if (!Directory.Exists(directory))
             {
-                throw new ArgumentException($"No directory for {propertyName} found: {directory}.", propertyName);
+                if (!create)
+                {
+                    throw new ArgumentException($"No directory for {propertyName} found: {directory}.", propertyName);
+                }
+
+                Directory.CreateDirectory(directory);
             }
         }
     }

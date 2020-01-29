@@ -1,46 +1,19 @@
 ﻿namespace HnTrends.Indexer
 {
-    using System;
-    using System.IO;
+    using Core;
     using Lucene.Net.Documents;
 
-    internal class Entry
+    internal static class EntryExtensions
     {
-        public int Id { get; set; }
-
-        public string Title { get; set; }
-
-        public string Url { get; set; }
-
-        public long Time { get; set; }
-
-        public DateTime Date { get; set; }
-
-        public static Entry Read(BinaryReader reader)
-        {
-            var result = new Entry
-            {
-                Id = reader.ReadInt32(),
-                Title = reader.ReadString(),
-                Url = reader.ReadString(),
-                Time = reader.ReadInt64()
-            };
-
-            result.Date = DateTimeOffset.FromUnixTimeSeconds(result.Time).UtcDateTime;
-
-            return result;
-        }
-
-        public Document ToDocument()
+        public static Document ToDocument(this Entry entry)
         {
             var doc = new Document
             {
-                new Int32Field(nameof(Id), Id, Field.Store.YES),
-                new TextField(nameof(Title), Title, Field.Store.YES),
-                new TextField(nameof(Url), Url, Field.Store.YES),
-                new Int64Field(nameof(Time), Time, Field.Store.YES)
+                new Int32Field(nameof(entry.Id), entry.Id, Field.Store.YES),
+                new TextField(nameof(entry.Title), entry.Title, Field.Store.YES),
+                new TextField(nameof(entry.Url), entry.Url, Field.Store.YES),
+                new Int64Field(nameof(entry.Time), entry.Time, Field.Store.YES)
             };
-
 
             return doc;
         }

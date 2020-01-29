@@ -1,20 +1,20 @@
 ﻿namespace HnTrends.Indexer
 {
     using System;
-    using System.Collections.Generic;
+    using System.Data.SQLite;
+    using System.Diagnostics;
     using System.Globalization;
     using System.IO;
+    using Database;
     using Lucene.Net.Index;
-    using Directory = System.IO.Directory;
 
     public static class Indexer
     {
         private static readonly object Lock = new object();
 
-        public static void Index(string dataDirectory, string indexDirectory, IndexWriter indexWriter)
+        public static void Index(string indexDirectory, SQLiteConnection connection, IndexWriter indexWriter)
         {
-            Guard.CheckDirectoryValid(indexDirectory, nameof(indexDirectory));
-            Guard.CheckDirectoryValid(dataDirectory, nameof(dataDirectory));
+            Guard.CheckDirectoryValid(indexDirectory, nameof(indexDirectory), false);
 
             var lockFile = Path.Combine(indexDirectory, "index.lock");
 
@@ -27,90 +27,57 @@
             {
                 var indexFile = Path.Combine(indexDirectory, "index.bin");
 
+                var lastIndexedId = int.MinValue;
+
                 var firstRun = !File.Exists(indexFile);
 
-                var requiresUpdate = firstRun;
-
-                int? minId = null;
                 if (!firstRun)
                 {
-                    if (RequiresUpdate(indexFile, out var idFrom))
+                    if (RequiresUpdate(indexFile, out var actualLastIndexed))
                     {
-                        requiresUpdate = true;
-                        minId = idFrom;
+                        lastIndexedId = actualLastIndexed;
+                    }
+                    else
+                    {
+                        return;
                     }
                 }
 
-                if (!requiresUpdate)
+                if (!LastWriteTable.TryRead(connection, out var lastWriteId) || lastIndexedId >= lastWriteId)
                 {
+                    Trace.WriteLine($"No indexing required, last indexed {lastIndexedId} which is equal to (or greater than) {lastWriteId}.");
                     return;
                 }
+
+                Trace.WriteLine($"Indexing from {lastWriteId} to {lastWriteId}.");
 
                 try
                 {
                     File.WriteAllBytes(lockFile, Array.Empty<byte>());
 
-                    var maxIdEncountered = minId.GetValueOrDefault();
-                    
-                    //create an index writer
-                    foreach (var indexable in GetFilesToIndex(dataDirectory))
+                    var count = 1;
+                    foreach (var entry in StoryTable.GetEntries(connection, lastIndexedId))
                     {
-                        var filename = Path.GetFileNameWithoutExtension(indexable);
-                        var numberPart = filename.Substring(0, filename.IndexOf('h'));
-                        var num = int.Parse(numberPart);
+                        var document = entry.ToDocument();
 
-                        if (num + 250_000 <= maxIdEncountered)
+                        indexWriter.AddDocument(document);
+
+                        if (count % 1000 == 0)
                         {
-                            continue;
+                            Trace.WriteLine($"Finished indexing #{count}.");
                         }
 
-                        using (var file = File.OpenRead(indexable))
-                        using (var reader = new BinaryReader(file))
-                        {
-                            while (file.Position < file.Length)
-                            {
-                                var entry = Entry.Read(reader);
-
-                                if (minId.HasValue && entry.Id <= minId.Value)
-                                {
-                                    continue;
-                                }
-
-                                if (entry.Id > maxIdEncountered)
-                                {
-                                    maxIdEncountered = entry.Id;
-                                }
-
-                                var document = entry.ToDocument();
-
-                                indexWriter.AddDocument(document);
-                            }
-                        }
+                        count++;
                     }
 
-                    File.WriteAllText(indexFile, maxIdEncountered.ToString(CultureInfo.InvariantCulture));
+                    Trace.WriteLine($"Index complete, setting last indexed id to {lastWriteId}.");
+
+                    File.WriteAllText(indexFile, lastWriteId.ToString(CultureInfo.InvariantCulture));
                 }
                 finally
                 {
                     File.Delete(lockFile);
                 }
-            }
-        }
-
-        private static IEnumerable<string> GetFilesToIndex(string directory)
-        {
-            var files = Directory.GetFiles(directory, "*-complete.bin");
-
-            foreach (var file in files)
-            {
-                yield return file;
-            }
-
-            var main = Path.Combine(directory, "hn.bin");
-
-            if (File.Exists(main))
-            {
-                // yield return main;
             }
         }
 
