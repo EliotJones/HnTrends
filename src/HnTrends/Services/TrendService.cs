@@ -6,7 +6,6 @@
     using System.Threading.Tasks;
     using Caches;
     using Indexer;
-    using Microsoft.CodeAnalysis.Operations;
     using ViewModels;
 
     internal class TrendService : ITrendService
@@ -14,14 +13,17 @@
         private readonly IIndexManager indexManager;
         private readonly IPostCountsCache postCountsCache;
         private readonly IStoryCountCache storyCountCache;
+        private readonly IResultsCache resultsCache;
 
         public TrendService(IIndexManager indexManager,
             IPostCountsCache postCountsCache,
-            IStoryCountCache storyCountCache)
+            IStoryCountCache storyCountCache,
+            IResultsCache resultsCache)
         {
             this.indexManager = indexManager ?? throw new ArgumentNullException(nameof(indexManager));
             this.postCountsCache = postCountsCache ?? throw new ArgumentNullException(nameof(postCountsCache));
             this.storyCountCache = storyCountCache ?? throw new ArgumentNullException(nameof(storyCountCache));
+            this.resultsCache = resultsCache ?? throw new ArgumentNullException(nameof(resultsCache));
         }
 
         public Task<DailyTrendDataViewModel> GetTrendDataForTermAsync(string searchTerm)
@@ -33,31 +35,45 @@
 
             var countsByDay = postCountsCache.Get();
 
-            var searchResults = indexManager.Search(searchTerm);
-
-            var counts = new List<ushort>();
-            var maxCount = 0;
-
-            for (var i = 0; i < countsByDay.Days.Count; i++)
+            if (!resultsCache.TryGet(searchTerm, out var cached))
             {
-                var date = countsByDay.Days[i];
+                var searchResults = indexManager.Search(searchTerm);
 
-                var onDate = searchResults.Count(x => x.Date.Date == date.Date);
+                var counts = new List<ushort>();
+                var maxCount = 0;
 
-                counts.Add((ushort)onDate);
-
-                if (onDate > maxCount)
+                for (var i = 0; i < countsByDay.Days.Count; i++)
                 {
-                    maxCount = onDate;
+                    var date = countsByDay.Days[i];
+
+                    var onDate = searchResults.Count(x => x.Date.Date == date.Date);
+
+                    counts.Add((ushort)onDate);
+
+                    if (onDate > maxCount)
+                    {
+                        maxCount = onDate;
+                    }
+                }
+
+                cached = new CachedResult
+                {
+                    Counts = counts,
+                    MaxCount = maxCount
+                };
+
+                if (searchResults.Count > 1000)
+                {
+                    resultsCache.Cache(searchTerm, cached);
                 }
             }
-            
+
             var result = new DailyTrendDataViewModel
             {
-                Counts = counts,
+                Counts = cached.Counts,
                 Start = countsByDay.Min,
                 End = countsByDay.Max,
-                CountMax = maxCount,
+                CountMax = cached.MaxCount,
                 DailyTotals = countsByDay.PostsPerDay
             };
 

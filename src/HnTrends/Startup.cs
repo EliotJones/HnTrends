@@ -60,6 +60,7 @@ namespace HnTrends
             services.AddSingleton<ICacheManager, CacheManager>();
             services.AddSingleton<IPostCountsCache, PostCountsCache>();
             services.AddSingleton<IStoryCountCache, StoryCountCache>();
+            services.AddSingleton<IResultsCache, ResultsCache>();
             services.AddSingleton<ITrendService, TrendService>();
 
             services.AddHostedService<UpdateDataBackgroundService>();
