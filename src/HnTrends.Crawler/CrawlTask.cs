@@ -58,7 +58,11 @@
                 return;
             }
 
-            var maxItem = int.Parse(await httpClient.GetStringAsync("https://hacker-news.firebaseio.com/v0/maxitem.json"));
+            var maxItemResponse = await httpClient
+                .GetStringAsync("https://hacker-news.firebaseio.com/v0/maxitem.json")
+                .ConfigureAwait(false);
+
+            var maxItem = int.Parse(maxItemResponse);
 
             if (lastId >= maxItem)
             {
@@ -96,7 +100,7 @@
                     tasks[threadIndex] = task;
                 }
 
-                await Task.WhenAll(tasks);
+                await Task.WhenAll(tasks).ConfigureAwait(false);
 
                 if (entries.Count > 10)
                 {
@@ -121,7 +125,7 @@
             {
                 var url = $"https://hacker-news.firebaseio.com/v0/item/{i}.json";
 
-                var str = await httpClient.GetStringAsync(url);
+                var str = await httpClient.GetStringAsync(url).ConfigureAwait(false);
 
                 if (str == null)
                 {
@@ -153,7 +157,7 @@
 
                 if (i < to)
                 {
-                    await Task.Delay(Random.Next(1, 5), token);
+                    await Task.Delay(Random.Next(1, 5), token).ConfigureAwait(false);
                 }
             }
         }

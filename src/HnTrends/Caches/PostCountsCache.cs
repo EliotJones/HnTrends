@@ -14,15 +14,17 @@
         private readonly IMemoryCache memoryCache;
         private readonly SQLiteConnection connection;
 
-        public PostCountsCache(IMemoryCache memoryCache, SQLiteConnection connection)
+        public PostCountsCache(IMemoryCache memoryCache, ICacheManager cacheManager, SQLiteConnection connection)
         {
             this.memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
             this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
-
+            
             if (this.connection.State == ConnectionState.Closed)
             {
                 throw new ArgumentException("Connection was closed.", nameof(connection));
             }
+
+            cacheManager.Register(nameof(PostCountsByDay));
         }
 
         public PostCountsByDay Get()

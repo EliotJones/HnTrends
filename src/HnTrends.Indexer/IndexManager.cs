@@ -1,6 +1,5 @@
 ﻿namespace HnTrends.Indexer
 {
-    using Lucene.Net.Analysis;
     using Lucene.Net.Analysis.Standard;
     using Lucene.Net.Index;
     using Lucene.Net.Search;
@@ -9,14 +8,16 @@
     using System;
     using System.Collections.Generic;
     using System.Data.SQLite;
+    using Core;
+    using Lucene.Net.QueryParsers.Classic;
 
     public class IndexManager : IIndexManager, IDisposable
     {
         private readonly string indexDirectory;
         private readonly SQLiteConnection connection;
 
-        private readonly Analyzer analyzer;
         private readonly IndexWriter writer;
+        private readonly QueryParser queryParser;
         private readonly SearcherManager searcherManager;
 
         public IndexManager(string indexDirectory, SQLiteConnection connection)
@@ -32,14 +33,17 @@
 
             var writerConfig = new IndexWriterConfig(LuceneVersion.LUCENE_48, standardAnalzyer);
             
-            analyzer = standardAnalzyer;
             writer = new IndexWriter(directory, writerConfig);
+            queryParser = new MultiFieldQueryParser(LuceneVersion.LUCENE_48, new[]
+            {
+                nameof(Entry.Title)
+            }, standardAnalzyer);
             searcherManager = new SearcherManager(writer, false, new SearcherFactory());
         }
 
         public IReadOnlyList<LocatedEntry> Search(string searchTerm)
         {
-            var results = Searcher.Search(searcherManager, analyzer, searchTerm);
+            var results = Searcher.Search(searcherManager, queryParser, searchTerm);
 
             return results;
         }

@@ -57,6 +57,7 @@ namespace HnTrends
                 return new IndexManager(index, x.GetService<SQLiteConnection>());
             });
 
+            services.AddSingleton<ICacheManager, CacheManager>();
             services.AddSingleton<IPostCountsCache, PostCountsCache>();
             services.AddSingleton<IStoryCountCache, StoryCountCache>();
             services.AddSingleton<ITrendService, TrendService>();

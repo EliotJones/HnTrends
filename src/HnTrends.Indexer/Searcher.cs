@@ -4,16 +4,14 @@
     using Lucene.Net.Search;
     using System.Collections.Generic;
     using Core;
-    using Lucene.Net.Analysis;
     using Lucene.Net.QueryParsers.Classic;
-    using Lucene.Net.Util;
 
     public static class Searcher
     {
         private static readonly Sort IdSort = new Sort(new SortField(nameof(Entry.Id), SortFieldType.INT32));
 
         public static IReadOnlyList<LocatedEntry> Search(SearcherManager manager,
-            Analyzer analyzer,
+            QueryParser queryParser,
             string searchTerm)
         {
             IndexSearcher searcher = null;
@@ -24,7 +22,6 @@
 
                 searcher = manager.Acquire();
 
-                var queryParser = new QueryParser(LuceneVersion.LUCENE_48, "Title", analyzer);
                 var query = queryParser.Parse(searchTerm);
                 
                 var searchResults = searcher.Search(query, int.MaxValue, IdSort);
