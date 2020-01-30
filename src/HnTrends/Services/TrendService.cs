@@ -79,7 +79,7 @@
             {
                 Start = postCounts.Min,
                 DailyTotals = postCounts.PostsPerDay,
-                Results = new List<EntryWithScore>()
+                Results = fullSearchResults.ToList()
             });
         }
 

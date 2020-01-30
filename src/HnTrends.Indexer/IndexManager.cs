@@ -50,7 +50,9 @@
 
         public IReadOnlyList<EntryWithScore> SearchWithFullResults(string searchTerm)
         {
-            return null;
+            var results = Searcher.SearchFull(searcherManager, queryParser, searchTerm);
+
+            return results;
         }
 
         public void UpdateIndex()

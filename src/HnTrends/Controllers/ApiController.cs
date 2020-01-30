@@ -1,6 +1,6 @@
 ﻿namespace HnTrends.Controllers
 {
-    using System;
+    using System.Threading.Tasks;
     using Microsoft.AspNetCore.Mvc;
     using Services;
 
@@ -23,9 +23,12 @@
 
         [Route("results/{term}")]
         [HttpGet]
-        public ActionResult GetDataFull(string term)
+        public async Task<ActionResult> GetDataFull(string term)
         {
-            return Ok(DateTime.UtcNow);
+            var full = await trendService.GetFullResultsForTermAsync(term)
+                .ConfigureAwait(false);
+
+            return Ok(full);
         }
     }
 }

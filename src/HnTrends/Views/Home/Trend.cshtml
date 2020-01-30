@@ -45,16 +45,16 @@ else
             var str = $("#data-load").val();
             var json = JSON.parse(str);
             var start = moment(json.Start);
-            console.log(start);
+
             var dates = [];
+
             for (var i = 0; i < json.Counts.length; i++) {
                 dates.push(start.toDate());
                 start.add(1, 'd');
             }
 
-            console.log(dates);
-
             json.Dates = dates;
+
             return json;
         }
 
@@ -256,9 +256,7 @@ else
             var json = loadDataFromHiddenInput();
 
             var data = dataForPeriod(json, document.hntrendstore.CurrentCategory);
-
-            console.log(data);
-
+            
             Plotly.plot(getPlotlyElement(),
                 getPlotlyData(data, true, document.hntrendstore.CurrentCategory),
                 getPlotlyLayout(data, true, document.hntrendstore.CurrentCategory),
