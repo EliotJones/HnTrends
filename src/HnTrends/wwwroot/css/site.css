@@ -25,11 +25,11 @@ nav {
 
     nav > a:first-child {
         color: #FEFEFE;
-        font-size: 1.6em;
+        font-size: 3.2rem;
         text-decoration: none;
-        line-height: 65px;
+        line-height: 72px;
         margin-left: 25px;
-        font-weight: bold;
+        font-weight: bolder;
     }
 
     #percent {

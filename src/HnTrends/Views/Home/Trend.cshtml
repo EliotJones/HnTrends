@@ -177,7 +177,13 @@ else
                     x: data.x,
                     y: isCount ? data.y : data.yPercent,
                     type: 'scatter',
-                    mode: period !== "Day" ? 'lines' : 'markers'
+                    mode: period !== "Day" ? 'lines' : 'markers',
+                    marker: {
+                        size: 3
+                    },
+                    line: {
+                        width: period === "Month" ? 2 : 1
+                    }
                 }
             ];
         }

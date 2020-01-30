@@ -1,4 +1,4 @@
-﻿namespace HnTrends
+﻿namespace HnTrends.ViewModels
 {
     public class IndexViewModel
     {

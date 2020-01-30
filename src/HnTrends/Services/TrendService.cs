@@ -1,4 +1,4 @@
-﻿namespace HnTrends
+﻿namespace HnTrends.Services
 {
     using System;
     using System.Collections.Generic;
@@ -6,6 +6,7 @@
     using System.Threading.Tasks;
     using Caches;
     using Indexer;
+    using ViewModels;
 
     internal class TrendService : ITrendService
     {

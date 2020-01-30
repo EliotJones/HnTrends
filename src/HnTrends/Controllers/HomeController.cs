@@ -1,12 +1,12 @@
-﻿using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
-using HnTrends.Models;
-
-namespace HnTrends.Controllers
+﻿namespace HnTrends.Controllers
 {
-    using System;
-    using System.Threading.Tasks;
+    using Microsoft.AspNetCore.Mvc;
     using Newtonsoft.Json;
+    using Services;
+    using System;
+    using System.Diagnostics;
+    using System.Threading.Tasks;
+    using ViewModels;
 
     public class HomeController : Controller
     {

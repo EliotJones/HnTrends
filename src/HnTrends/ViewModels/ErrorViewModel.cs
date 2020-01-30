@@ -1,6 +1,4 @@
-using System;
-
-namespace HnTrends.Models
+namespace HnTrends.ViewModels
 {
     public class ErrorViewModel
     {
