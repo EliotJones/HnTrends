@@ -2,6 +2,7 @@
 {
     using System;
     using System.Data.SQLite;
+    using System.Diagnostics;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
@@ -11,6 +12,7 @@
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
+    using ILogger = Microsoft.Extensions.Logging.ILogger;
 
     /// <summary>
     /// Responsible for scheduled downloading of data and re-indexing.
@@ -39,6 +41,8 @@
             this.cacheManager = cacheManager;
             this.logger = logger;
             minutesBetweenRun = (uint)timingOptions.Value.MinutesBetweenRun;
+
+            Trace.Listeners.Add(new MyTraceListener(logger));
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -63,12 +67,36 @@
 
                     logger.LogInformation("Background update completed successfully.");
                 }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Background update failed due to error.");
+                }
                 finally
                 {
                     semaphore.Release();
                 }
 
                 await Task.Delay(TimeSpan.FromMinutes(minutesBetweenRun), stoppingToken);
+            }
+        }
+
+        private class MyTraceListener : TraceListener
+        {
+            private readonly ILogger logger;
+
+            public MyTraceListener(ILogger logger)
+            {
+                this.logger = logger;
+            }
+
+            public override void Write(string message)
+            {
+                logger.LogInformation(message);
+            }
+
+            public override void WriteLine(string message)
+            {
+                logger.LogInformation(message);
             }
         }
     }
