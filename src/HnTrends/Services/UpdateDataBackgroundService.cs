@@ -42,7 +42,7 @@
                 {
                     await semaphore.WaitAsync(stoppingToken);
 
-                    var updateTask = new CrawlTask(connection, client);
+                    var updateTask = new CrawlTask(connection, client, 1);
 
                     await Task.Delay(3000, stoppingToken);
 

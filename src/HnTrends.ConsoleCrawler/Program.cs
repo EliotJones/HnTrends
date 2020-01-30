@@ -21,7 +21,7 @@
             
             using (var connection = Connector.ConnectToFile(@"C:\git\csharp\hn-reader\data\hn-data.sqlite"))
             {
-                var crawlTask = new CrawlTask(connection, Client);
+                var crawlTask = new CrawlTask(connection, Client, 3);
                 
                 await crawlTask.Run();
             }

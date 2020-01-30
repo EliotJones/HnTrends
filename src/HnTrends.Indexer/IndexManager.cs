@@ -32,7 +32,6 @@
 
             var writerConfig = new IndexWriterConfig(LuceneVersion.LUCENE_48, standardAnalzyer);
             
-            
             analyzer = standardAnalzyer;
             writer = new IndexWriter(directory, writerConfig);
             searcherManager = new SearcherManager(writer, false, new SearcherFactory());
