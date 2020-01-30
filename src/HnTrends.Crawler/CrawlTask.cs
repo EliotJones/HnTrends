@@ -5,6 +5,7 @@
     using System.Data.SQLite;
     using System.Diagnostics;
     using System.Net.Http;
+    using System.Threading;
     using System.Threading.Tasks;
     using Core;
     using Database;
@@ -23,7 +24,7 @@
             this.httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         }
 
-        public async Task Run()
+        public async Task Run(CancellationToken cancellationToken = default(CancellationToken))
         {
             LastWriteTable.TryRead(connection, out var lastId);
 
@@ -39,6 +40,11 @@
                 max = range.to;
                 min = range.from;
             }
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
             
             var maxItem = int.Parse(await httpClient.GetStringAsync("https://hacker-news.firebaseio.com/v0/maxitem.json"));
 
@@ -47,13 +53,24 @@
                 return;
             }
 
-            Trace.WriteLine($"Running from {lastId} to {maxItem}.");
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            var count = maxItem - Math.Max(0, lastId);
+            Trace.WriteLine($"Running from {lastId} to {maxItem} ({count} items).");
 
             var entries = new List<Entry>();
             var errorCount = 0;
 
             for (var i = lastId + 1; i <= maxItem; i++)
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
                 try
                 {
                     var url = $"https://hacker-news.firebaseio.com/v0/item/{i}.json";
@@ -87,7 +104,7 @@
 
                         Trace.WriteLine($"Saved Story: {i}.");
 
-                        if (entries.Count % 5 == 0)
+                        if (entries.Count % 10 == 0)
                         {
                             Trace.WriteLine("Flushing to database.");
 
@@ -97,13 +114,13 @@
                         }
                     }
 
-                    await Task.Delay(Random.Next(2, 5));
+                    await Task.Delay(Random.Next(1, 5), cancellationToken);
 
                 }
                 catch
                 {
                     errorCount++;
-                    await Task.Delay(1000);
+                    await Task.Delay(1000, cancellationToken);
 
                     if (errorCount >= 100)
                     {

@@ -21,11 +21,10 @@
 
         public IndexManager(string indexDirectory, SQLiteConnection connection)
         {
-            if (connection == null) throw new ArgumentNullException(nameof(connection));
             Guard.CheckDirectoryValid(indexDirectory, nameof(indexDirectory), true);
 
             this.indexDirectory = indexDirectory;
-            this.connection = connection;
+            this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
 
             var directory = FSDirectory.Open(indexDirectory);
 

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 namespace HnTrends
 {
+    using System;
     using Caches;
     using Indexer;
     using Microsoft.AspNetCore.Http;
@@ -11,6 +12,7 @@ namespace HnTrends
     using Microsoft.Extensions.Options;
     using Services;
     using System.Data.SQLite;
+    using System.Net.Http;
 
     public class Startup
     {
@@ -32,7 +34,15 @@ namespace HnTrends
             });
 
             services.Configure<FileLocations>(Configuration.GetSection("FileLocations"));
+            services.Configure<TimingOptions>(Configuration.GetSection("Timing"));
+
             services.AddMemoryCache();
+
+            services.AddSingleton(x => new HttpClient
+            {
+                BaseAddress = new Uri("https://news.ycombinator.com/"),
+                Timeout = TimeSpan.FromMinutes(1)
+            });
 
             services.AddSingleton(x =>
             {
@@ -50,6 +60,8 @@ namespace HnTrends
             services.AddSingleton<IPostCountsCache, PostCountsCache>();
             services.AddSingleton<IStoryCountCache, StoryCountCache>();
             services.AddSingleton<ITrendService, TrendService>();
+
+            services.AddHostedService<UpdateDataBackgroundService>();
 
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
         }
