@@ -48,6 +48,11 @@
             return results;
         }
 
+        public IReadOnlyList<EntryWithScore> SearchWithFullResults(string searchTerm)
+        {
+            return null;
+        }
+
         public void UpdateIndex()
         {
             Indexer.Index(indexDirectory, connection, writer);

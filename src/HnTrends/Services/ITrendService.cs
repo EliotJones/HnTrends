@@ -5,7 +5,9 @@
 
     public interface ITrendService
     {
-        Task<DailyTrendData> GetTrendDataForTermAsync(string searchTerm);
+        Task<DailyTrendDataViewModel> GetTrendDataForTermAsync(string searchTerm);
+
+        Task<FullResultsViewModel> GetFullResultsForTermAsync(string searchTerm);
 
         int GetTotalStoryCount();
     }

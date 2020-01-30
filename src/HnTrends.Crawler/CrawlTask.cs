@@ -95,7 +95,9 @@
 
                     var threadStartId = i + offset;
 
-                    var task = RunBucket(threadStartId, threadStartId + ThreadBucketSize, entries, cancellationToken);
+                    var end = Math.Min(maxItem + 1, threadStartId + ThreadBucketSize);
+
+                    var task = RunBucket(threadStartId, end, entries, cancellationToken);
 
                     tasks[threadIndex] = task;
                 }
@@ -114,6 +116,8 @@
 
             if (entries.Count > 0)
             {
+                Trace.WriteLine("Flushing to database.");
+
                 WriteEntries(entries.OrderBy(x => x.Id), maxItem, ref min, ref max);
             }
         }

@@ -6,6 +6,7 @@
     using System.Threading.Tasks;
     using Caches;
     using Indexer;
+    using Microsoft.CodeAnalysis.Operations;
     using ViewModels;
 
     internal class TrendService : ITrendService
@@ -23,11 +24,11 @@
             this.storyCountCache = storyCountCache ?? throw new ArgumentNullException(nameof(storyCountCache));
         }
 
-        public Task<DailyTrendData> GetTrendDataForTermAsync(string searchTerm)
+        public Task<DailyTrendDataViewModel> GetTrendDataForTermAsync(string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
             {
-                throw new ArgumentException();
+                throw new ArgumentException("Search term cannot be null or empty", nameof(searchTerm));
             }
 
             var countsByDay = postCountsCache.Get();
@@ -51,10 +52,9 @@
                 }
             }
             
-            var result = new DailyTrendData
+            var result = new DailyTrendDataViewModel
             {
                 Counts = counts,
-                Dates = countsByDay.Days,
                 Start = countsByDay.Min,
                 End = countsByDay.Max,
                 CountMax = maxCount,
@@ -62,6 +62,25 @@
             };
 
             return Task.FromResult(result);
+        }
+
+        public Task<FullResultsViewModel> GetFullResultsForTermAsync(string searchTerm)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                throw new ArgumentException("Search term cannot be null or empty", nameof(searchTerm));
+            }
+
+            var postCounts = postCountsCache.Get();
+
+            var fullSearchResults = indexManager.SearchWithFullResults(searchTerm);
+
+            return Task.FromResult(new FullResultsViewModel
+            {
+                Start = postCounts.Min,
+                DailyTotals = postCounts.PostsPerDay,
+                Results = new List<EntryWithScore>()
+            });
         }
 
         public int GetTotalStoryCount()

@@ -44,6 +44,17 @@ else
         function loadDataFromHiddenInput() {
             var str = $("#data-load").val();
             var json = JSON.parse(str);
+            var start = moment(json.Start);
+            console.log(start);
+            var dates = [];
+            for (var i = 0; i < json.Counts.length; i++) {
+                dates.push(start.toDate());
+                start.add(1, 'd');
+            }
+
+            console.log(dates);
+
+            json.Dates = dates;
             return json;
         }
 

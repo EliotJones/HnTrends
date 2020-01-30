@@ -2,7 +2,6 @@
 {
     using System;
     using System.Data.SQLite;
-    using System.IO;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
@@ -10,6 +9,7 @@
     using Crawler;
     using Indexer;
     using Microsoft.Extensions.Hosting;
+    using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
 
     /// <summary>
@@ -21,6 +21,7 @@
         private readonly SQLiteConnection connection;
         private readonly HttpClient client;
         private readonly ICacheManager cacheManager;
+        private readonly ILogger<UpdateDataBackgroundService> logger;
         private readonly uint minutesBetweenRun;
 
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
@@ -29,12 +30,14 @@
             SQLiteConnection connection,
             HttpClient client,
             ICacheManager cacheManager,
-            IOptions<TimingOptions> timingOptions)
+            IOptions<TimingOptions> timingOptions,
+            ILogger<UpdateDataBackgroundService> logger)
         {
             this.indexManager = indexManager ?? throw new ArgumentNullException(nameof(indexManager));
             this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
             this.client = client ?? throw new ArgumentNullException(nameof(client));
             this.cacheManager = cacheManager;
+            this.logger = logger;
             minutesBetweenRun = (uint)timingOptions.Value.MinutesBetweenRun;
         }
 
@@ -46,17 +49,19 @@
                 {
                     await semaphore.WaitAsync(stoppingToken);
 
+                    logger.LogInformation("Running background update.");
+
                     var updateTask = new CrawlTask(connection, client, 1);
 
-                    await Task.Delay(3000, stoppingToken);
+                    await updateTask.Run(stoppingToken);
 
-                    File.AppendAllText(@"C:\temp\background-signal", $"Ran at: {DateTime.UtcNow}.\r\n");
+                    logger.LogInformation("Update finished. Refreshing index and clearing cache.");
 
-                    //await updateTask.Run();
+                    indexManager.UpdateIndex();
 
-                    //indexManager.UpdateIndex();
+                    cacheManager.Clear();
 
-                    // cacheManager.Clear();
+                    logger.LogInformation("Background update completed successfully.");
                 }
                 finally
                 {

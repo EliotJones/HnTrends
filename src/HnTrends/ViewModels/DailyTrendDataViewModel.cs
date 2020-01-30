@@ -3,7 +3,7 @@
     using System;
     using System.Collections.Generic;
 
-    public class DailyTrendData
+    public class DailyTrendDataViewModel
     {
         public DateTime Start { get; set; }
 
@@ -14,7 +14,5 @@
         public List<ushort> DailyTotals { get; set; }
 
         public int CountMax { get; set; }
-
-        public List<DateTime> Dates { get; set; }
     }
 }

@@ -15,8 +15,8 @@
 
         public PostCountsByDay(DateTime min, DateTime max, List<ushort> postsPerDay, List<DateTime> days)
         {
-            Min = min;
-            Max = max;
+            Min = min.Date;
+            Max = max.Date;
             PostsPerDay = postsPerDay ?? throw new ArgumentNullException(nameof(postsPerDay));
             Days = days ?? throw new ArgumentNullException(nameof(days));
         }
