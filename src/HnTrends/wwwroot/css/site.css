@@ -45,7 +45,7 @@ p {
     margin-bottom: 1.2rem;
 }
 
-#multiterm-label {
+#allwords-label {
     line-height: 12px;
     font-weight: normal;
     font-style: italic;
@@ -54,7 +54,7 @@ p {
     margin-top: -5px;
 }
 
-#multiterm {
+#allwords {
     position: relative;
     top: 2px;
 }

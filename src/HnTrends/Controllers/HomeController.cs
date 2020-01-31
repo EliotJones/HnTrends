@@ -30,7 +30,7 @@
         }
 
         [HttpGet]
-        public async Task<IActionResult> Trend(string id, bool multiTerm)
+        public async Task<IActionResult> Trend(string id, bool allWords)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -39,9 +39,9 @@
 
             var originalTerm = id;
 
-            if (multiTerm)
+            if (allWords)
             {
-                id = FixupMultiTermSearch(id);
+                id = MakeAllWordSearch(id);
             }
 
             var resultData = await trendService.GetTrendDataForTermAsync(id);
@@ -70,7 +70,7 @@
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
         }
 
-        private static string FixupMultiTermSearch(string id)
+        private static string MakeAllWordSearch(string id)
         {
             if (id.IndexOf(' ') < 0)
             {
