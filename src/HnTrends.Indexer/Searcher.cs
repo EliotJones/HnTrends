@@ -71,7 +71,7 @@
 
                 var query = queryParser.Parse(searchTerm);
 
-                var searchResults = searcher.Search(query, int.MaxValue, IdSort);
+                var searchResults = searcher.Search(query, null, int.MaxValue, IdSort, true, true);
 
                 var results = new EntryWithScore[searchResults.TotalHits];
 

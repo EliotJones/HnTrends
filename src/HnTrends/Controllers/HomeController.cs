@@ -10,6 +10,8 @@
 
     public class HomeController : Controller
     {
+        private static readonly char[] SplitChars = {' '};
+
         private readonly ITrendService trendService;
 
         public HomeController(ITrendService trendService)
@@ -28,18 +30,25 @@
         }
 
         [HttpGet]
-        public async Task<IActionResult> Trend(string id)
+        public async Task<IActionResult> Trend(string id, bool multiTerm)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
                 return BadRequest("Trend search term must have a value.");
             }
 
+            var originalTerm = id;
+
+            if (multiTerm)
+            {
+                id = FixupMultiTermSearch(id);
+            }
+
             var resultData = await trendService.GetTrendDataForTermAsync(id);
 
             return View(new TrendViewModel
             {
-                Term = id,
+                Term = originalTerm,
                 Data = JsonConvert.SerializeObject(resultData),
                 To = resultData.End,
                 From = resultData.Start,
@@ -59,6 +68,35 @@
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+        }
+
+        private static string FixupMultiTermSearch(string id)
+        {
+            if (id.IndexOf(' ') < 0)
+            {
+                return id;
+            }
+
+            var parts = id.Split(SplitChars, StringSplitOptions.RemoveEmptyEntries);
+
+            var result = string.Empty;
+            for (var i = 0; i < parts.Length; i++)
+            {
+                var part = parts[i];
+                if (part.Length > 1 && part[0] != '+')
+                {
+                    result += '+';
+                }
+
+                result += part;
+
+                if (i < parts.Length - 1)
+                {
+                    result += ' ';
+                }
+            }
+
+            return result;
         }
     }
 }

@@ -44,3 +44,17 @@ nav {
 p {
     margin-bottom: 1.2rem;
 }
+
+#multiterm-label {
+    line-height: 12px;
+    font-weight: normal;
+    font-style: italic;
+    color: #666;
+    display: block;
+    margin-top: -5px;
+}
+
+#multiterm {
+    position: relative;
+    top: 2px;
+}

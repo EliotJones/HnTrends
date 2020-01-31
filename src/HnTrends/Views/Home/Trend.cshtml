@@ -12,7 +12,7 @@ else
 {
     <h3>Data for '@Model.Term'</h3>
     <div class="remark">Search term is case insensitive.</div>
-    <p>This shows the count of stories posted to HackerNews featuring the search term in the title or URL by <span id="period">Day</span>.</p>
+    <p>This shows the count of stories posted to Hacker News featuring the search term in the title by <span id="period">Day</span>.</p>
     <p>The data is not updated in real time. Currently the data runs between <em>@Model.From.ToShortDateString()</em> and <em>@Model.To.ToShortDateString()</em>.</p>
 
     <input id="data-load" type="hidden" asp-for="Data" />

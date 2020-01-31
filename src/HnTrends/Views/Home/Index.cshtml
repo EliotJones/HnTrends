@@ -6,14 +6,18 @@
 <h3>Search</h3>
 
 <p>Search for occurrences of a term in our database of @Model.StoryCount.ToString("N0") stories submitted to 
-    <a href="https://news.ycombinator.com/" target="_blank">Hacker News</a> since 2006.</p>
+    <a href="https://news.ycombinator.com/" target="_blank">Hacker News</a> since 2007.</p>
 
-<p>Stories are matched to the search term using the URL or Title, the story content isn't indexed. This also excludes "Ask HN" style posts.</p>
+<p>Stories are matched to the search term using the Title, the story content isn't indexed. This also excludes Ask HN posts.</p>
 
 <form asp-controller="Home" asp-action="Trend" method="get">
-    <label for="search">Enter a search term:</label>
+    <label for="search" style="margin-top: 25px;">Enter a search term:</label>
     <input name="id" type="text" min="2" id="search" />
     <button type="submit">Search</button>
+    <label for="multiterm" id="multiterm-label" title="For a search containing multiple words the story must contain all words.">
+        Search result must match all words: 
+        <input type="checkbox" name="multiterm" id="multiterm" value="true" checked />
+    </label>
 </form>
 
 <p>
