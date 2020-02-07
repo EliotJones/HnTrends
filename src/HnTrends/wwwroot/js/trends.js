@@ -9,14 +9,13 @@ function addDays(date, days) {
 function loadDataFromHiddenInput() {
     var str = $("#data-load").val();
     var json = JSON.parse(str);
-    var start = moment(json.Start);
+    var start = window.moment(json.Start);
 
-    var dates = [];
-
-    for (var i = 0; i < json.Counts.length; i++) {
-        dates.push(start.toDate());
+    var dates = json.Counts.map(() => {
+        var date = start.toDate();
         start.add(1, 'd');
-    }
+        return date;
+    });
 
     json.Dates = dates;
 
@@ -95,7 +94,7 @@ function dataForPeriod(data, others, period, skipLast) {
                     counts,
                     percents,
                     previous,
-                    x => moment(x).endOf('week').toDate());
+                    x => window.moment(x).endOf('week').toDate());
                 previous = x;
                 break;
             case "Month":
@@ -107,7 +106,7 @@ function dataForPeriod(data, others, period, skipLast) {
                     counts,
                     percents,
                     previous,
-                    x => moment(x).startOf('month').toDate());
+                    x => window.moment(x).startOf('month').toDate());
                 previous = x;
                 break;
             case "Day":
@@ -210,7 +209,7 @@ function getPlotlyData(data, isCount, period) {
                 width: width
             },
             name: data.names[i]
-        }
+        };
     });
 }
 
@@ -242,7 +241,8 @@ function togglePeriod(period) {
         document.hntrendstore.others,
         document.hntrendstore.CurrentCategory,
         getSkipLast());
-    Plotly.newPlot(getPlotlyElement(),
+    
+    window.Plotly.newPlot(getPlotlyElement(),
         getPlotlyData(data, isCount, document.hntrendstore.CurrentCategory),
         getPlotlyLayout(data, isCount, document.hntrendstore.CurrentCategory),
         getModeBarSettings());
@@ -258,7 +258,8 @@ function togglePercent() {
         document.hntrendstore.others,
         document.hntrendstore.CurrentCategory,
         getSkipLast());
-    Plotly.newPlot(getPlotlyElement(),
+    
+    window.Plotly.newPlot(getPlotlyElement(),
         getPlotlyData(data, isCount, document.hntrendstore.CurrentCategory),
         getPlotlyLayout(data, isCount, document.hntrendstore.CurrentCategory),
         getModeBarSettings());
@@ -289,12 +290,22 @@ $("#add-term").click(() => {
         return;
     }
 
+    $("#add-term").hide();
+    $("#loading").show();
+
     $.get(`/api/plot/${term}?allWords=${allWords}`)
         .done(data => {
             $("#text").val('');
             addDataPlot(data);
         })
-        .fail(err => console.log(err));
+        .fail(err => {
+            console.log(err);
+            alert('An error occurred, please check the log.');
+        })
+        .always(() => {
+            $("#add-term").show();
+            $("#loading").hide();
+        });
 });
 
 $("#text").keyup(event => {
@@ -317,7 +328,7 @@ $(function () {
 
     $("#period").text(document.hntrendstore.CurrentCategory);
 
-    var shouldSkipLast = moment().date() < 10;
+    var shouldSkipLast = window.moment().date() < 10;
 
     if (shouldSkipLast) {
         $("#skiplast").click();
@@ -328,8 +339,8 @@ $(function () {
     var json = loadDataFromHiddenInput();
 
     var data = dataForPeriod(json, [], document.hntrendstore.CurrentCategory, getSkipLast());
-
-    Plotly.plot(getPlotlyElement(),
+    
+    window.Plotly.plot(getPlotlyElement(),
         getPlotlyData(data, true, document.hntrendstore.CurrentCategory),
         getPlotlyLayout(data, true, document.hntrendstore.CurrentCategory),
         getModeBarSettings());

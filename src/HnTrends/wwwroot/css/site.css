@@ -60,7 +60,7 @@ p {
 }
 
 #plot {
-    min-width: 300px;
+    min-width: 600px;
     width: 90%;
     height: 600px;
 }
@@ -69,6 +69,12 @@ p {
     margin-right: 10%;
 }
 
-#skip-last-container {
-    margin-top: 5px;
+#add-term-container>label:first-child {
+    display: inline-block;
+}
+
+#skiplastlabel {
+    display: inline-block;
+    margin-left: 20px;
+    color: #AAA;
 }
