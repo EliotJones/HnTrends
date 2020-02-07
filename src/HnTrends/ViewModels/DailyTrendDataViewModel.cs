@@ -14,5 +14,7 @@
         public List<ushort> DailyTotals { get; set; }
 
         public int CountMax { get; set; }
+
+        public string Term { get; set; }
     }
 }

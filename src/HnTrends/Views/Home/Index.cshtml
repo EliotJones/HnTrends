@@ -12,7 +12,7 @@
 
 <form asp-controller="Home" asp-action="Trend" method="get">
     <label for="search" style="margin-top: 25px;">Enter a search term:</label>
-    <input name="id" type="text" min="2" id="search" />
+    <input name="id" type="text" required id="search" />
     <button type="submit">Search</button>
     <label for="allwords" id="allwords-label" title="For a search containing multiple words the story must contain all words.">
         Search result must match all words: 

@@ -1,0 +1,11 @@
+﻿namespace HnTrends.ViewModels
+{
+    using System.Collections.Generic;
+
+    public class PlotAggregateDataViewModel
+    {
+        public List<ushort> Counts { get; set; }
+
+        public string Term { get; set; }
+    }
+}

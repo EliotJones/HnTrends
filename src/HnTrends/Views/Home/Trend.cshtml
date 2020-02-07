@@ -27,7 +27,13 @@ else
     </label>
 
     <button type="button" id="percent" onclick="togglePercent()">Display as % of stories</button>
-    <div id="plot" style="width: 90%; height: 600px;"></div>
+
+    <div id="plot"></div>
+
+    <div id="add-term-container" class="u-pull-right">
+        <input name="text" type="text" id="text" title="Add another search term to compare trends" />
+        <button id="add-term" type="button" title="Add this search term to the plot">Add</button>
+    </div>
 }
 
 
@@ -74,7 +80,9 @@ else
         }
 
         function buildYAxis(data, isCount) {
-            var max = Math.max.apply(Math, isCount ? data.y : data.yPercent);
+            var maxBySeries = isCount ? data.ys.map(series => Math.max.apply(Math, series))
+                : data.percents.map(series => Math.max.apply(Math, series));
+            var max = Math.max.apply(Math, maxBySeries);
             return {
                 range: [0, isCount ? (max + 1) : max + 0.1],
                 linecolor: '#333',
@@ -87,116 +95,154 @@ else
             return {
                 xaxis: buildXAxis(data, period),
                 yaxis: buildYAxis(data, isCount),
-                title:'Posts over time for \'@Model.Term\'.',
+                title: 'Posts over time for \'@Model.Term\'.',
                 hovermode: 'closest'
             };
         }
 
         function getModeBarSettings() {
-            return { modeBarButtonsToRemove: ['toImage', 'pan2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines', 'select2d'] };
+            return {
+                modeBarButtonsToRemove: ['pan2d', 'lasso2d', 'autoScale2d', 'toggleSpikelines', 'select2d']
+            };
         }
 
-        function dataForPeriod(data, period) {
+        function dataForPeriod(data, others, period) {
             var dateLabels = [];
-            var yData = [];
-            var yPercentData = [];
+            var counts = [[]];
+            var percents = [[]];
+            var names = [data.Term];
+
+            others.forEach(x => {
+                counts.push([]);
+                percents.push([]);
+                names.push(x.term);
+            });
 
             var previous;
-            var dataRequiresFlattening = false;
-            
+
             data.Dates.forEach((x, i) => {
                 switch (period) {
-                    case "Week":
-                        dataRequiresFlattening = true;
-                        groupDataPointsByPeriod(data,
-                            x,
-                            i,
-                            dateLabels,
-                            yData,
-                            yPercentData,
-                            previous,
-                            x => moment(x).endOf('week').toDate());
-                        previous = x;
-                        break;
-                    case "Month":
-                        dataRequiresFlattening = true;
-                        groupDataPointsByPeriod(data,
-                            x,
-                            i,
-                            dateLabels,
-                            yData,
-                            yPercentData,
-                            previous,
-                            x => moment(x).startOf('month').toDate());
-                        previous = x;
-                        break;
+                case "Week":
+                    groupDataPointsByPeriod(data,
+                        x,
+                        i,
+                        dateLabels,
+                        others,
+                        counts,
+                        percents,
+                        previous,
+                        x => moment(x).endOf('week').toDate());
+                    previous = x;
+                    break;
+                case "Month":
+                    groupDataPointsByPeriod(data,
+                        x,
+                        i,
+                        dateLabels,
+                        others,
+                        counts,
+                        percents,
+                        previous,
+                        x => moment(x).startOf('month').toDate());
+                    previous = x;
+                    break;
                 case "Day":
                 default:
                     dateLabels.push(x);
-                    yData.push(data.Counts[i]);
-                    yPercentData.push((data.Counts[i] / data.DailyTotals[i]) * 100);
+
+                    counts[0].push(data.Counts[i]);
+                    percents[0].push((data.Counts[i] / data.DailyTotals[i]) * 100);
+                    others.forEach((o, oi) => {
+                        counts[oi + 1].push(o.counts[i]);
+                        percents[oi + 1].push(((o.counts[i] / data.DailyTotals[i]) * 100).toFixed(2));
+                    });
                     break;
                 }
             });
 
-            if (dataRequiresFlattening) {
-                yData.forEach((x, i) => {
-                    if (yPercentData[i] === 0) {
-                        yPercentData[i] = 0;
-                        return;
-                    }
-                    yPercentData[i] = (x / yPercentData[i]) * 100;
+            if (period !== "Day") {
+                counts.forEach((set, setIndex) => {
+                    var percentData = percents[setIndex];
+                    set.forEach((x, i) => {
+                        if (percentData[i] !== 0) {
+                            percentData[i] = ((x / percentData[i]) * 100).toFixed(2);
+                        }
+                    });
                 });
             }
 
             return {
-                y: yData,
-                yPercent: yPercentData,
-                x: dateLabels
+                ys: counts,
+                percents: percents,
+                x: dateLabels,
+                names: names
             };
         }
 
-        function groupDataPointsByPeriod(data, date, index, dateLabels, yData, yPercentData,
+        function groupDataPointsByPeriod(data,
+            date,
+            index,
+            dateLabels,
+            others,
+            counts,
+            percents,
             previous,
             periodGrouper) {
             var dayCount = data.Counts[index];
             var dayTotal = data.DailyTotals[index];
 
+            var isNewPeriod = false;
             var periodForThisDate = periodGrouper(date);
 
             if (index === 0) {
                 dateLabels.push(periodForThisDate);
-                yData.push(dayCount);
-                yPercentData.push(dayTotal);
+                isNewPeriod = true;
             } else {
                 var periodForPreviousDate = periodGrouper(previous);
 
                 if (periodForThisDate.toDateString() === periodForPreviousDate.toDateString()) {
-                    yData[yData.length - 1] += dayCount;
-                    yPercentData[yPercentData.length - 1] += dayTotal;
                 } else {
                     dateLabels.push(periodForThisDate);
-                    yData.push(dayCount);
-                    yPercentData.push(dayTotal);
+                    isNewPeriod = true;
                 }
+            }
+
+            if (isNewPeriod) {
+                counts[0].push(dayCount);
+                percents[0].push(dayTotal);
+                others.forEach((o, oi) => {
+                    counts[oi + 1].push(o.counts[index]);
+                    percents[oi + 1].push(dayTotal);
+                });
+            } else {
+                var periodIndex = counts[0].length - 1;
+                counts[0][periodIndex] += dayCount;
+                percents[0][periodIndex] += dayTotal;
+                others.forEach((o, oi) => {
+                    counts[oi + 1][periodIndex] += o.counts[index];
+                    percents[oi + 1][periodIndex] += dayTotal;
+                });
             }
         }
 
         function getPlotlyData(data, isCount, period) {
-            return [
-                {
+            var isMonthly = period === "Month";
+            var width = !isMonthly ? 1 : data.ys.length === 1 ? 2 : 1;
+            return data.ys.map((ySeries, i) => {
+                return {
                     x: data.x,
-                    y: isCount ? data.y : data.yPercent,
+                    y: isCount ? ySeries : data.percents[i],
                     type: 'scatter',
                     mode: period !== "Day" ? 'lines' : 'markers',
                     marker: {
                         size: 3
                     },
                     line: {
-                        width: period === "Month" ? 2 : 1
-                    }
+                        width: width
+                    },
+                    name: data.names[i]
                 }
-            ];
+            });
         }
 
         function getPlotlyElement() {
@@ -219,7 +265,9 @@ else
             $("#period").text(period);
 
             var isCount = document.hntrendstore.isCount;
-            var data = dataForPeriod(loadDataFromHiddenInput(), document.hntrendstore.CurrentCategory);
+            var data = dataForPeriod(loadDataFromHiddenInput(),
+                document.hntrendstore.others,
+                document.hntrendstore.CurrentCategory);
             Plotly.newPlot(getPlotlyElement(),
                 getPlotlyData(data, isCount, document.hntrendstore.CurrentCategory),
                 getPlotlyLayout(data, isCount, document.hntrendstore.CurrentCategory),
@@ -232,18 +280,55 @@ else
 
             $('#percent').text(isCount ? 'Display as % of total stories' : 'Display as # of stories');
             document.hntrendstore.isCount = isCount;
-            var data = dataForPeriod(loadDataFromHiddenInput(), document.hntrendstore.CurrentCategory);
+            var data = dataForPeriod(loadDataFromHiddenInput(),
+                document.hntrendstore.others,
+                document.hntrendstore.CurrentCategory);
             Plotly.newPlot(getPlotlyElement(),
                 getPlotlyData(data, isCount, document.hntrendstore.CurrentCategory),
                 getPlotlyLayout(data, isCount, document.hntrendstore.CurrentCategory),
                 getModeBarSettings());
         }
-        
-        $(function () {
+
+        function addDataPlot(data) {
+            document.hntrendstore.others.push(data);
+            togglePeriod(document.hntrendstore.CurrentCategory);
+        }
+
+        $("#add-term").click(() => {
+            var term = $("#text").val().trim();
+
+            if (term.length < 1) {
+                $("#text").val('');
+                return;
+            }
+
+            var hasExisting = document.hntrendstore.others.filter(x => x.term.toUpperCase() === term.toUpperCase()).length > 0;
+
+            if (hasExisting) {
+                alert(`Search term ${term} already displayed.`);
+                return;
+            }
+
+            $.get(`/api/plot/${term}?allWords=true`)
+                .done(data => {
+                    $("#text").val('');
+                    addDataPlot(data);
+                })
+                .fail(err => console.log(err));
+        });
+
+        $("#text").keyup(event => {
+            if (event.keyCode === 13) {
+                $("#add-term").click();
+            }
+        });
+
+        $(function() {
 
             document.hntrendstore = {
                 isCount: true,
-                CurrentCategory: "Month"
+                CurrentCategory: "Month",
+                others: []
             };
 
             if (!$('#data-load').length) {
@@ -255,8 +340,8 @@ else
 
             var json = loadDataFromHiddenInput();
 
-            var data = dataForPeriod(json, document.hntrendstore.CurrentCategory);
-            
+            var data = dataForPeriod(json, [], document.hntrendstore.CurrentCategory);
+
             Plotly.plot(getPlotlyElement(),
                 getPlotlyData(data, true, document.hntrendstore.CurrentCategory),
                 getPlotlyLayout(data, true, document.hntrendstore.CurrentCategory),

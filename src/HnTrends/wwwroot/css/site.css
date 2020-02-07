@@ -58,3 +58,13 @@ p {
     position: relative;
     top: 2px;
 }
+
+#plot {
+    min-width: 300px;
+    width: 90%;
+    height: 600px;
+}
+
+#add-term-container>button {
+    display: inline-block;
+}

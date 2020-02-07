@@ -10,8 +10,6 @@
 
     public class HomeController : Controller
     {
-        private static readonly char[] SplitChars = {' '};
-
         private readonly ITrendService trendService;
 
         public HomeController(ITrendService trendService)
@@ -41,10 +39,11 @@
 
             if (allWords)
             {
-                id = MakeAllWordSearch(id);
+                id = SearchTermHelper.MakeAllWordSearch(id);
             }
 
             var resultData = await trendService.GetTrendDataForTermAsync(id);
+            resultData.Term = originalTerm;
 
             return View(new TrendViewModel
             {
@@ -68,35 +67,6 @@
         public IActionResult Error()
         {
             return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
-
-        private static string MakeAllWordSearch(string id)
-        {
-            if (id.IndexOf(' ') < 0)
-            {
-                return id;
-            }
-
-            var parts = id.Split(SplitChars, StringSplitOptions.RemoveEmptyEntries);
-
-            var result = string.Empty;
-            for (var i = 0; i < parts.Length; i++)
-            {
-                var part = parts[i];
-                if (part.Length > 1 && part[0] != '+' && part[0] != '-')
-                {
-                    result += '+';
-                }
-
-                result += part;
-
-                if (i < parts.Length - 1)
-                {
-                    result += ' ';
-                }
-            }
-
-            return result;
         }
     }
 }

@@ -34,7 +34,7 @@
 
             lock (mutex)
             {
-                if (cache.TryGetValue(searchTerm, out CachedResult result))
+                if (cache.TryGetValue(searchTerm.ToLowerInvariant(), out CachedResult result))
                 {
                     logger.LogInformation($"Using cached value for: {searchTerm}.");
 
