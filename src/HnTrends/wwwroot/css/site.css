@@ -45,7 +45,7 @@ p {
     margin-bottom: 1.2rem;
 }
 
-#allwords-label {
+.setting-checkbox-label {
     line-height: 12px;
     font-weight: normal;
     font-style: italic;
@@ -65,6 +65,10 @@ p {
     height: 600px;
 }
 
-#add-term-container>button {
-    display: inline-block;
+#add-term-container {
+    margin-right: 10%;
+}
+
+#skip-last-container {
+    margin-top: 5px;
 }

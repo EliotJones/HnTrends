@@ -4,5 +4,11 @@
     "inputFiles": [
       "wwwroot/css/site.css"
     ]
+  },
+  {
+    "outputFileName": "wwwroot/js/trends.min.js",
+    "inputFiles": [
+      "wwwroot/js/trends.js"
+    ]
   }
 ]
