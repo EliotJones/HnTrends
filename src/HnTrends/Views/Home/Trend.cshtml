@@ -33,6 +33,10 @@ else
     <div id="add-term-container" class="u-pull-right">
         <input name="text" type="text" id="text" title="Add another search term to compare trends" />
         <button id="add-term" type="button" title="Add this search term to the plot">Add</button>
+        <label for="allwords" id="allwords-label" title="Title must contain all words.">
+            Search result must match all words: 
+            <input type="checkbox" name="allwords" id="allwords" value="true" checked />
+        </label>
     </div>
 }
 
@@ -80,7 +84,8 @@ else
         }
 
         function buildYAxis(data, isCount) {
-            var maxBySeries = isCount ? data.ys.map(series => Math.max.apply(Math, series))
+            var maxBySeries = isCount
+                ? data.ys.map(series => Math.max.apply(Math, series))
                 : data.percents.map(series => Math.max.apply(Math, series));
             var max = Math.max.apply(Math, maxBySeries);
             return {
@@ -115,7 +120,7 @@ else
             others.forEach(x => {
                 counts.push([]);
                 percents.push([]);
-                names.push(x.term);
+                names.push(x.term + (x.allWords ? '' : ' (any)'));
             });
 
             var previous;
@@ -302,14 +307,19 @@ else
                 return;
             }
 
-            var hasExisting = document.hntrendstore.others.filter(x => x.term.toUpperCase() === term.toUpperCase()).length > 0;
+            var allWords = $("#allwords").prop('checked');
+
+            var hasExisting = document.hntrendstore.others.filter(x => x.term.toUpperCase() === term.toUpperCase()
+            && x.allWords === allWords)
+                .length >
+                0;
 
             if (hasExisting) {
                 alert(`Search term ${term} already displayed.`);
                 return;
             }
 
-            $.get(`/api/plot/${term}?allWords=true`)
+            $.get(`/api/plot/${term}?allWords=${allWords}`)
                 .done(data => {
                     $("#text").val('');
                     addDataPlot(data);

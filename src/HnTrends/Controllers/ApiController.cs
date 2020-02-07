@@ -48,7 +48,8 @@
             return Ok(new PlotAggregateDataViewModel
             {
                 Counts = results.Counts,
-                Term = originalTerm
+                Term = originalTerm,
+                AllWords = allWords
             });
         }
     }
