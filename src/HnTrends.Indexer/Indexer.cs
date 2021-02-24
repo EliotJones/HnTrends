@@ -49,7 +49,7 @@
                     return;
                 }
 
-                Trace.WriteLine($"Indexing from {lastWriteId} to {lastWriteId}.");
+                Trace.WriteLine($"Indexing from {lastIndexedId} to {lastWriteId}.");
 
                 try
                 {
@@ -67,12 +67,13 @@
                             Trace.WriteLine($"Finished indexing #{count}.");
                         }
 
+                        lastIndexedId = entry.Id;
                         count++;
                     }
 
                     Trace.WriteLine($"Index complete, setting last indexed id to {lastWriteId}.");
 
-                    File.WriteAllText(indexFile, lastWriteId.ToString(CultureInfo.InvariantCulture));
+                    File.WriteAllText(indexFile, lastIndexedId.ToString(CultureInfo.InvariantCulture));
                 }
                 finally
                 {
