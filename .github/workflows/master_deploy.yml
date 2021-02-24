@@ -20,7 +20,7 @@ jobs:
       - run: dotnet build -c Release src/HnTrends/HnTrends.csproj
 
       # Now build a linux publish
-      - run: dotnet publish -c Release -r linux-x64 -o ./site src/HnTrends/HnTrends.csproj
+      - run: dotnet publish -c Release -r linux-x64 -o "$GITHUB_WORKSPACE/site" src/HnTrends/HnTrends.csproj
 
       # Copying files and artifacts via SSH
       - name: Copying files to server
