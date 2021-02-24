@@ -39,4 +39,16 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           rm: true
           source: "site/"
-          target: "${{ secrets.REMOTE_DIR }}"
+          target: ${{ secrets.REMOTE_DIR }}
+
+      - name: Deploy files
+        uses: garygrossgarten/github-action-ssh@release
+        with:
+          command: sudo service supervisor stop && \
+            rm -rf /var/hn-trend/website/ && \
+            cp -a /home/eliot/hn-trend-deploy/site/. /var/hn-trend/website/ && \
+            chown -R www-data /var/hn-trend/website/ && \
+            sudo service supervisor start
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          privateKey: ${{ secrets.SSH_KEY }}
