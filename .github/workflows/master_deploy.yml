@@ -1,0 +1,35 @@
+name: Deploy to production via SSH
+
+on:
+  push:
+    branches: [master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE,
+      # so your workflow can access it
+      - uses: actions/checkout@master
+
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "3.1.x"
+
+      # Build the release build
+      - run: dotnet build -c Release src/HnTrends/HnTrends.csproj
+
+      # Now build a linux publish
+      - run: dotnet publish -c Release -r linux-x64 -o site src/HnTrends/HnTrends.csproj
+
+      # Copying files and artifacts via SSH
+      - name: Copying files to server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          passphrase: ${{ secrets.SSH_KEY_PASSPHRASE }}
+          rm: true
+          source: "site/"
+          target: "${{ secrets.REMOTE_DIR }}"
