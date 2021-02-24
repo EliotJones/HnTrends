@@ -24,6 +24,11 @@ jobs:
           FileLocations.Database: "/var/hn-trend/data/hn-data.sqlite"
           FileLocations.Index: "/var/hn-trend/index"
 
+      - name: Auto Minify
+        uses: nizarmah/auto-minify@master
+        with:
+          directory: "src/HnTrends/wwwroot"
+
       # Build the release build
       - run: dotnet build -c Release src/HnTrends/HnTrends.csproj
 
