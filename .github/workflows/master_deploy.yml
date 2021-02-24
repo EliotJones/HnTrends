@@ -16,6 +16,14 @@ jobs:
         with:
           dotnet-version: "2.1.x"
 
+      - name: Update appsettings.json
+        uses: microsoft/variable-substitution@v1
+        with:
+          files: "src/HnTrends/appsettings.json"
+        env:
+          FileLocations.Database: "/var/hn-trend/data/hn-data.sqlite"
+          FileLocations.Index: "/var/hn-trend/index"
+
       # Build the release build
       - run: dotnet build -c Release src/HnTrends/HnTrends.csproj
 
