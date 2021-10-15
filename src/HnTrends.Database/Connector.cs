@@ -1,22 +1,24 @@
-﻿namespace HnTrends.Database
+﻿using Microsoft.Data.Sqlite;
+
+namespace HnTrends.Database
 {
     using System;
-    using System.Data.SQLite;
 
     public static class Connector
     {
         /// <summary>
         /// Connects to the given filename, opens the connection.
         /// </summary>
-        public static SQLiteConnection ConnectToFile(string filename)
+        public static SqliteConnection ConnectToFile(string filename)
         {
             if (filename == null)
             {
                 throw new ArgumentNullException(nameof(filename));
             }
 
-            var connection = new SQLiteConnection($"Data Source={filename}");
-            return connection.OpenAndReturn();
+            var connection = new SqliteConnection($"Data Source={filename}");
+            connection.Open();
+            return connection;
         }
     }
 }

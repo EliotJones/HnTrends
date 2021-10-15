@@ -1,28 +1,32 @@
 ﻿@model IndexViewModel
 @{
     ViewData["Title"] = "Search";
+    Layout = "_RootLayout";
 }
 
-<h3>Search</h3>
+<div id="wrapper">
+    <div id="background">
 
-<p>Search for occurrences of a term in our database of @Model.StoryCount.ToString("N0") stories submitted to 
-    <a href="https://news.ycombinator.com/" target="_blank">Hacker News</a> since 2007.</p>
+    </div>
+    <div id="normal">
+        <div id="form-container">
+            <h3>HackerNews Trends</h3>
 
-<p>Stories are matched to the search term using the Title, the story content isn't indexed. This also excludes Ask HN posts.</p>
-
-<form asp-controller="Home" asp-action="Trend" method="get">
-    <label for="search" style="margin-top: 25px;">Enter a search term:</label>
-    <input name="id" type="text" required id="search" />
-    <button type="submit">Search</button>
-    <label for="allwords" class="setting-checkbox-label" id="allwords-label" title="For a search containing multiple words the story must contain all words.">
-        Search result must match all words: 
-        <input type="checkbox" name="allwords" id="allwords" value="true" checked />
-    </label>
-</form>
-
-<p>
+            <p class="front-p">
+                Search for occurrences of a term in our database of @Model.StoryCount.ToString("N0") story titles for stories submitted to
+                <a href="https://news.ycombinator.com/" target="_blank">Hacker News</a> since 2007.
+            </p>
+            <form id="the-form" asp-controller="Home" asp-action="Trend" method="get">
+                <input name="id" type="text" title="Enter a search term" required id="search" />
+                <label for="allwords" style="display: none" class="setting-checkbox-label" id="allwords-label" title="For a search containing multiple words the story must contain all words.">
+                    Search result must match all words:
+                    <input type="checkbox" name="allwords" id="allwords" value="true" checked />
+                </label>
+                <button type="submit">Search</button>
+            </form>
+            <p style="text-align: center; color: #999; margin-bottom: 0; margin-top: 80px;">
     Not sure what to search? Why not try:
-    <ul>
+    <ul id="suggestion-list">
         <li><a asp-action="Trend" asp-route-id="Keras">Keras</a></li>
         <li><a asp-action="Trend" asp-route-id="Tensorflow">Tensorflow</a></li>
         <li><a asp-action="Trend" asp-route-id="Rust">Rust</a></li>
@@ -32,4 +36,109 @@
         <li><a asp-action="Trend" asp-route-id="Bitcoin">Bitcoin</a></li>
     </ul>
 </p>
+        </div>
+    </div>
+</div>
 
+
+
+<style>
+    #wrapper {
+        position: relative;
+    }
+    #background {
+        background: #0984e3;
+        height: 65vh;
+        width: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+    #normal {
+        position: relative;
+        display: flex;
+        width: 100%;
+        height: 100vh;
+        justify-content: center;
+        align-items: center;
+        min-height: 70vh;
+    }
+    #form-container {
+        width: 50vw;
+        min-width: 600px;
+        background: white;
+        border: 2px solid #FEFEFE;
+        box-shadow: 0 1px 1px rgb(0 0 0 / 8%), 0 2px 2px rgb(0 0 0 / 12%), 0 4px 4px rgb(0 0 0 / 16%);
+        padding: 20px;
+    }
+    #form-container > h3 {
+        text-align: center;
+        font-weight: bold;
+        margin-top: 20px;
+        color: #444;
+        letter-spacing: 0.05rem;
+        margin-bottom: 40px;
+    }
+
+    #the-form {
+        margin-top: 10px;
+        display: flex;
+        flex-direction: column;
+        margin-bottom: 20px;
+        align-items: center;
+    }
+
+    #the-form>button {
+        width: 200px;
+        margin-top: 15px;
+    }
+
+    #search {
+        background: #EFEFEF;
+        width: 90%;
+        border-radius: 4px;
+        border: none;
+        padding: 10px;
+        height: 50px;
+        font-size: 2rem;
+        margin: auto;
+        color: #666;
+    }
+    .front-p {
+        text-align: center;
+        color: #666;
+        font-weight: lighter;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+        line-height: 2.5rem;
+        margin-bottom: 5px;
+        font-size: 1.5rem;
+        letter-spacing: 0.05rem;
+    }
+    #suggestion-list {
+        margin-bottom: 0;
+        text-align: center;
+    }
+    #suggestion-list>li {
+        display: inline-block;
+        margin-right: 10px;
+        opacity: 0.8;
+    }
+</style>
+
+@section Scripts
+{
+    <script>
+        $("#search").on('input', function() {
+            var text = $(this).val();
+            console.log(text)
+            var hasSpace = text.indexOf(' ') > 0;
+            if (hasSpace) {
+                $("#allwords-label").show();
+            } else {
+                $("#allwords-label").hide();
+            }
+        })
+    </script>
+}

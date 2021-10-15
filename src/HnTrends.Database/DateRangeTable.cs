@@ -1,16 +1,19 @@
-﻿namespace HnTrends.Database
+﻿using Microsoft.Data.Sqlite;
+
+namespace HnTrends.Database
 {
     using System;
-    using System.Data.SQLite;
     using Core;
 
     public static class DateRangeTable
     {
-        public static void Write(DateTime from, DateTime to, SQLiteConnection connection)
+        public static void Write(DateTime from, DateTime to, SqliteConnection connection)
         {
-            var command = new SQLiteCommand($@"
+            var command = connection.CreateCommand();
+
+            command.CommandText = $@"
 DELETE FROM {Schema.DateRangeTable};
-INSERT INTO {Schema.DateRangeTable} (first, last) VALUES (@from, @to);", connection);
+INSERT INTO {Schema.DateRangeTable} (first, last) VALUES (@from, @to);";
 
             command.Parameters.AddWithValue("from", Entry.DateToTime(from));
             command.Parameters.AddWithValue("to", Entry.DateToTime(to));
@@ -18,11 +21,11 @@ INSERT INTO {Schema.DateRangeTable} (first, last) VALUES (@from, @to);", connect
             command.ExecuteNonQuery();
         }
 
-        public static bool TryRead(SQLiteConnection connection, out (DateTime from, DateTime to) range)
+        public static bool TryRead(SqliteConnection connection, out (DateTime from, DateTime to) range)
         {
             range = (DateTime.MinValue, DateTime.MaxValue);
 
-            var command = new SQLiteCommand($@"SELECT first, last FROM {Schema.DateRangeTable} LIMIT 1;", connection);
+            var command = new SqliteCommand($@"SELECT first, last FROM {Schema.DateRangeTable} LIMIT 1;", connection);
 
             using (var reader = command.ExecuteReader())
             {

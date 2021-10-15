@@ -38,10 +38,7 @@
         {
             var originalTerm = term;
 
-            if (allWords)
-            {
-                term = SearchTermHelper.MakeAllWordSearch(term);
-            }
+            term = SearchTermHelper.MakeSafeWordSearch(term, allWords);
 
             var results = await trendService.GetTrendDataForTermAsync(term);
 

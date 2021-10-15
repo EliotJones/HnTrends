@@ -5,7 +5,15 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.112" />
+    <None Remove="migrations\*.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="migrations\*.sql" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="5.0.11" />
   </ItemGroup>
 
   <ItemGroup>

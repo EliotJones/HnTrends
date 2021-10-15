@@ -5,28 +5,29 @@
     using System.Linq;
     using System.Threading.Tasks;
     using Caches;
-    using Indexer;
+    using Core;
+    using Microsoft.Data.Sqlite;
     using ViewModels;
 
     internal class TrendService : ITrendService
     {
-        private readonly IIndexManager indexManager;
+        private readonly SqliteConnection connection;
         private readonly IPostCountsCache postCountsCache;
         private readonly IStoryCountCache storyCountCache;
         private readonly IResultsCache resultsCache;
 
-        public TrendService(IIndexManager indexManager,
+        public TrendService(SqliteConnection connection,
             IPostCountsCache postCountsCache,
             IStoryCountCache storyCountCache,
             IResultsCache resultsCache)
         {
-            this.indexManager = indexManager ?? throw new ArgumentNullException(nameof(indexManager));
+            this.connection = connection;
             this.postCountsCache = postCountsCache ?? throw new ArgumentNullException(nameof(postCountsCache));
             this.storyCountCache = storyCountCache ?? throw new ArgumentNullException(nameof(storyCountCache));
             this.resultsCache = resultsCache ?? throw new ArgumentNullException(nameof(resultsCache));
         }
 
-        public Task<DailyTrendDataViewModel> GetTrendDataForTermAsync(string searchTerm)
+        public async Task<DailyTrendDataViewModel> GetTrendDataForTermAsync(string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -37,7 +38,7 @@
 
             if (!resultsCache.TryGet(searchTerm, out var cached))
             {
-                var searchResults = indexManager.Search(searchTerm);
+                var searchResults = await Search(searchTerm);
 
                 var counts = new List<ushort>();
                 var maxCount = 0;
@@ -77,10 +78,10 @@
                 DailyTotals = countsByDay.PostsPerDay
             };
 
-            return Task.FromResult(result);
+            return result;
         }
 
-        public Task<FullResultsViewModel> GetFullResultsForTermAsync(string searchTerm)
+        public async Task<FullResultsViewModel> GetFullResultsForTermAsync(string searchTerm)
         {
             if (string.IsNullOrWhiteSpace(searchTerm))
             {
@@ -89,19 +90,95 @@
 
             var postCounts = postCountsCache.Get();
 
-            var fullSearchResults = indexManager.SearchWithFullResults(searchTerm);
+            var results = await SearchFull(searchTerm);
 
-            return Task.FromResult(new FullResultsViewModel
+            return new FullResultsViewModel
             {
                 Start = postCounts.Min,
                 DailyTotals = postCounts.PostsPerDay,
-                Results = fullSearchResults.ToList()
-            });
+                Results = results
+            };
+        }
+
+        private async Task<IReadOnlyList<LocatedEntry>> Search(string searchTerm)
+        {
+            var command = new SqliteCommand(
+                @"SELECT time, title FROM search_target WHERE title MATCH @query;",
+                connection);
+
+            command.Parameters.AddWithValue("query", searchTerm);
+
+            using var reader = await command.ExecuteReaderAsync();
+
+            var results = new List<LocatedEntry>();
+            while (reader.Read())
+            {
+                if (reader.IsDBNull(0))
+                {
+                    continue;
+                }
+
+                var unixTs = reader.GetInt64(0);
+                var title = reader.GetString(1);
+
+                results.Add(new LocatedEntry(Entry.TimeToDate(unixTs)));
+            }
+
+            return results;
+        }
+
+        private async Task<IReadOnlyList<EntryWithScore>> SearchFull(string searchTerm)
+        {
+            var command = new SqliteCommand(
+                @"
+                    SELECT s.id, s.title, s.url, bm25(search_target) FROM search_target as st
+                    INNER JOIN story as s
+                    ON s.id = st.id
+                    WHERE st.title MATCH @query;",
+                connection);
+
+            command.Parameters.AddWithValue("query", searchTerm);
+
+            using var reader = await command.ExecuteReaderAsync();
+
+            var results = new List<EntryWithScore>();
+            while (reader.Read())
+            {
+                if (reader.IsDBNull(0))
+                {
+                    continue;
+                }
+
+                var id = reader.GetInt32(0);
+                var title = reader.GetString(1);
+                var url = reader.GetString(2);
+                var score = reader.GetDouble(3);
+
+                results.Add(new EntryWithScore
+                {
+                    Id = id,
+                    Score = score,
+                    Title = title,
+                    Url = url
+                });
+            }
+
+            return results;
         }
 
         public int GetTotalStoryCount()
         {
             return storyCountCache.Get();
+        }
+    }
+
+    internal class LocatedEntry
+    {
+        public DateTime Date { get; }
+
+        public LocatedEntry(DateTime date)
+        {
+            Date = date;
         }
     }
 }

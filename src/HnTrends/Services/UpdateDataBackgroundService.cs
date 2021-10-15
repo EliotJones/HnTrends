@@ -1,14 +1,13 @@
 ﻿namespace HnTrends.Services
 {
     using System;
-    using System.Data.SQLite;
     using System.Diagnostics;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
     using Caches;
     using Crawler;
-    using Indexer;
+    using Microsoft.Data.Sqlite;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -19,8 +18,7 @@
     /// </summary>
     internal class UpdateDataBackgroundService : BackgroundService
     {
-        private readonly IIndexManager indexManager;
-        private readonly SQLiteConnection connection;
+        private readonly SqliteConnection connection;
         private readonly HttpClient client;
         private readonly ICacheManager cacheManager;
         private readonly ILogger<UpdateDataBackgroundService> logger;
@@ -28,14 +26,13 @@
 
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
-        public UpdateDataBackgroundService(IIndexManager indexManager,
-            SQLiteConnection connection,
+        public UpdateDataBackgroundService(
+            SqliteConnection connection,
             HttpClient client,
             ICacheManager cacheManager,
             IOptions<TimingOptions> timingOptions,
             ILogger<UpdateDataBackgroundService> logger)
         {
-            this.indexManager = indexManager ?? throw new ArgumentNullException(nameof(indexManager));
             this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
             this.client = client ?? throw new ArgumentNullException(nameof(client));
             this.cacheManager = cacheManager;
@@ -59,9 +56,7 @@
 
                     await updateTask.Run(stoppingToken);
 
-                    logger.LogInformation("Update finished. Refreshing index and clearing cache.");
-
-                    indexManager.UpdateIndex();
+                    logger.LogInformation("Update finished. Clearing cache.");
 
                     cacheManager.Clear();
 

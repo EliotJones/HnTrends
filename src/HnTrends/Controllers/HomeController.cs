@@ -37,10 +37,7 @@
 
             var originalTerm = id;
 
-            if (allWords)
-            {
-                id = SearchTermHelper.MakeAllWordSearch(id);
-            }
+            id = SearchTermHelper.MakeSafeWordSearch(id, allWords);
 
             var resultData = await trendService.GetTrendDataForTermAsync(id);
             resultData.Term = originalTerm;

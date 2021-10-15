@@ -1,21 +1,24 @@
-﻿namespace HnTrends.Database
+﻿using Microsoft.Data.Sqlite;
+
+namespace HnTrends.Database
 {
     using System;
     using System.Collections.Generic;
-    using System.Data.SQLite;
     using Core;
 
     public static class StoryTable
     {
-        public static void Write(Entry entry, SQLiteConnection connection)
+        public static void Write(Entry entry, SqliteConnection connection)
         {
             if (entry == null)
             {
                 throw new ArgumentNullException(nameof(entry));
             }
 
-            var command = new SQLiteCommand(@"INSERT OR IGNORE INTO story(id, title, url, time) 
-VALUES(@id, @title, @url, @time);", 
+            var command = new SqliteCommand(@"INSERT OR IGNORE INTO story(id, title, url, time) 
+VALUES(@id, @title, @url, @time);
+
+INSERT INTO search_target(id, title) VALUES (@id, @title);", 
                 connection);
 
             command.Parameters.AddWithValue("id", entry.Id);
@@ -26,10 +29,10 @@ VALUES(@id, @title, @url, @time);",
             command.ExecuteNonQuery();
         }
 
-        public static IEnumerable<Entry> GetEntries(SQLiteConnection connection,
+        public static IEnumerable<Entry> GetEntries(SqliteConnection connection,
             int minId = 0)
         {
-            var command = new SQLiteCommand($@"SELECT id, title, url, time FROM {Schema.StoryTable}
+            var command = new SqliteCommand($@"SELECT id, title, url, time FROM {Schema.StoryTable}
  WHERE id >= @id;",
                 connection);
 
@@ -54,9 +57,9 @@ VALUES(@id, @title, @url, @time);",
             }
         }
 
-        public static int GetCount(SQLiteConnection connection)
+        public static int GetCount(SqliteConnection connection)
         {
-            var command = new SQLiteCommand($@"SELECT COUNT(*) FROM {Schema.StoryTable};", connection);
+            var command = new SqliteCommand($@"SELECT COUNT(*) FROM {Schema.StoryTable};", connection);
 
             return (int)(long)command.ExecuteScalar();
         }

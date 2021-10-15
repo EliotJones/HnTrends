@@ -46,12 +46,11 @@ p {
 }
 
 .setting-checkbox-label {
-    line-height: 12px;
     font-weight: normal;
     font-style: italic;
-    color: #666;
-    display: block;
-    margin-top: -5px;
+    color: #999;
+    display: flex;
+    margin-top: 10px;
 }
 
 #allwords {

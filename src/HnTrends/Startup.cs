@@ -1,18 +1,18 @@
-﻿using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-namespace HnTrends
+﻿namespace HnTrends
 {
-    using System;
     using Caches;
-    using Indexer;
+    using Microsoft.AspNetCore.Builder;
+    using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Http;
     using Microsoft.AspNetCore.Mvc;
+    using Microsoft.Data.Sqlite;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Microsoft.Extensions.Options;
     using Services;
-    using System.Data.SQLite;
+    using System;
     using System.Net.Http;
+
 
     public class Startup
     {
@@ -47,14 +47,9 @@ namespace HnTrends
             services.AddSingleton(x =>
             {
                 var str = x.GetService<IOptions<FileLocations>>().Value.Database;
-                var conn = new SQLiteConnection($"Data Source={str}");
-                return conn.OpenAndReturn();
-            });
-
-            services.AddSingleton<IIndexManager>(x =>
-            {
-                var index = x.GetService<IOptions<FileLocations>>().Value.Index;
-                return new IndexManager(index, x.GetService<SQLiteConnection>());
+                var conn = new SqliteConnection($"Data Source={str}");
+                conn.Open();
+                return conn;
             });
 
             services.AddSingleton<ICacheManager, CacheManager>();

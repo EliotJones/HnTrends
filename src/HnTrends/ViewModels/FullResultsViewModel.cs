@@ -2,7 +2,6 @@
 {
     using System;
     using System.Collections.Generic;
-    using Indexer;
 
     public class FullResultsViewModel
     {
@@ -10,6 +9,17 @@
 
         public List<ushort> DailyTotals { get; set; }
 
-        public List<EntryWithScore> Results { get; set; }
+        public IReadOnlyList<EntryWithScore> Results { get; set; }
+    }
+
+    public class EntryWithScore
+    {
+        public int Id { get; set; }
+
+        public string Title { get; set; }
+
+        public string Url { get; set; }
+
+        public double Score { get; set; }
     }
 }

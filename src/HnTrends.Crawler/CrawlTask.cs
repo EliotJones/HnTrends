@@ -1,9 +1,10 @@
-﻿namespace HnTrends.Crawler
+﻿using Microsoft.Data.Sqlite;
+
+namespace HnTrends.Crawler
 {
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
-    using System.Data.SQLite;
     using System.Diagnostics;
     using System.Linq;
     using System.Net.Http;
@@ -19,11 +20,11 @@
 
         private static readonly Random Random = new Random(250);
 
-        private readonly SQLiteConnection connection;
+        private readonly SqliteConnection connection;
         private readonly HttpClient httpClient;
         private readonly byte maxThreads;
 
-        public CrawlTask(SQLiteConnection connection, HttpClient httpClient, byte maxThreads)
+        public CrawlTask(SqliteConnection connection, HttpClient httpClient, byte maxThreads)
         {
             this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
             this.httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
@@ -168,28 +169,23 @@
 
         private void WriteEntries(IEnumerable<Entry> entries, int maxId, ref DateTime min, ref DateTime max)
         {
-            using (var transaction = connection.BeginTransaction())
+            foreach (var e in entries)
             {
-                foreach (var e in entries)
+                StoryTable.Write(e, connection);
+
+                if (e.Date > max)
                 {
-                    StoryTable.Write(e, connection);
-
-                    if (e.Date > max)
-                    {
-                        max = e.Date;
-                    }
-
-                    if (e.Date < min)
-                    {
-                        min = e.Date;
-                    }
+                    max = e.Date;
                 }
 
-                DateRangeTable.Write(min, max, connection);
-                LastWriteTable.Write(maxId, connection);
-
-                transaction.Commit();
+                if (e.Date < min)
+                {
+                    min = e.Date;
+                }
             }
+
+            DateRangeTable.Write(min, max, connection);
+            LastWriteTable.Write(maxId, connection);
         }
     }
 }

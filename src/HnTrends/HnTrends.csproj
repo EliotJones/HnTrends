@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,18 +14,18 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="BuildBundlerMinifier" Version="3.2.449" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.1.2" PrivateAssets="All" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="5.0.11" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.2.0" />
-    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.112" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\HnTrends.Core\HnTrends.Core.csproj" />
     <ProjectReference Include="..\HnTrends.Crawler\HnTrends.Crawler.csproj" />
     <ProjectReference Include="..\HnTrends.Database\HnTrends.Database.csproj" />
-    <ProjectReference Include="..\HnTrends.Indexer\HnTrends.Indexer.csproj" />
   </ItemGroup>
 
 </Project>

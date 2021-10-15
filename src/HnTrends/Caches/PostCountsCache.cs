@@ -1,9 +1,10 @@
-﻿namespace HnTrends.Caches
+﻿using Microsoft.Data.Sqlite;
+
+namespace HnTrends.Caches
 {
     using System;
     using System.Collections.Generic;
     using System.Data;
-    using System.Data.SQLite;
     using Database;
     using Microsoft.Extensions.Caching.Memory;
 
@@ -12,9 +13,9 @@
         private static readonly object Lock = new object();
 
         private readonly IMemoryCache memoryCache;
-        private readonly SQLiteConnection connection;
+        private readonly SqliteConnection connection;
 
-        public PostCountsCache(IMemoryCache memoryCache, ICacheManager cacheManager, SQLiteConnection connection)
+        public PostCountsCache(IMemoryCache memoryCache, ICacheManager cacheManager, SqliteConnection connection)
         {
             this.memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
             this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
