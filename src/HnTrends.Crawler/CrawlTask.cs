@@ -169,23 +169,28 @@ namespace HnTrends.Crawler
 
         private void WriteEntries(IEnumerable<Entry> entries, int maxId, ref DateTime min, ref DateTime max)
         {
-            foreach (var e in entries)
+            using (var transaction = connection.BeginTransaction())
             {
-                StoryTable.Write(e, connection);
-
-                if (e.Date > max)
+                foreach (var e in entries)
                 {
-                    max = e.Date;
+                    StoryTable.Write(e, connection, transaction);
+
+                    if (e.Date > max)
+                    {
+                        max = e.Date;
+                    }
+
+                    if (e.Date < min)
+                    {
+                        min = e.Date;
+                    }
                 }
 
-                if (e.Date < min)
-                {
-                    min = e.Date;
-                }
+                DateRangeTable.Write(min, max, connection, transaction);
+                LastWriteTable.Write(maxId, connection, transaction);
+
+                transaction.Commit();
             }
-
-            DateRangeTable.Write(min, max, connection);
-            LastWriteTable.Write(maxId, connection);
         }
     }
 }

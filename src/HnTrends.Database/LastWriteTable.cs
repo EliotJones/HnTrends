@@ -4,11 +4,11 @@ namespace HnTrends.Database
 {
     public static class LastWriteTable
     {
-        public static void Write(int value, SqliteConnection connection)
+        public static void Write(int value, SqliteConnection connection, SqliteTransaction transaction)
         {
             var command = new SqliteCommand($@"
 DELETE FROM {Schema.LastWriteTable};
-INSERT INTO {Schema.LastWriteTable} (id) VALUES (@id);", connection);
+INSERT INTO {Schema.LastWriteTable} (id) VALUES (@id);", connection, transaction);
 
             command.Parameters.AddWithValue("id", value);
 

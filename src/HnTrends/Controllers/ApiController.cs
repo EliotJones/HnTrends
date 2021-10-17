@@ -26,6 +26,8 @@
         [HttpGet]
         public async Task<ActionResult> GetDataFull(string term)
         {
+            term = SearchTermHelper.MakeSafeWordSearch(term, false);
+
             var full = await trendService.GetFullResultsForTermAsync(term)
                 .ConfigureAwait(false);
 

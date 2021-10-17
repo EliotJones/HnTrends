@@ -293,10 +293,11 @@ $("#add-term").click(() => {
     $("#add-term").hide();
     $("#loading").show();
 
-    $.get(`/api/plot/${term}?allWords=${allWords}`)
+    $.get(`/api/plot/${encodeURIComponent(term)}?allWords=${allWords}`)
         .done(data => {
             $("#text").val('');
             addDataPlot(data);
+            $("#terms-list-list").append(`<li><a href="/api/results/${encodeURIComponent(term)}" target="_blank">${term}</a></li>`);
         })
         .fail(err => {
             console.log(err);

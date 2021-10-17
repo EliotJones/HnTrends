@@ -7,13 +7,14 @@ namespace HnTrends.Database
 
     public static class DateRangeTable
     {
-        public static void Write(DateTime from, DateTime to, SqliteConnection connection)
+        public static void Write(DateTime from, DateTime to, SqliteConnection connection, SqliteTransaction transaction)
         {
             var command = connection.CreateCommand();
 
             command.CommandText = $@"
 DELETE FROM {Schema.DateRangeTable};
 INSERT INTO {Schema.DateRangeTable} (first, last) VALUES (@from, @to);";
+            command.Transaction = transaction;
 
             command.Parameters.AddWithValue("from", Entry.DateToTime(from));
             command.Parameters.AddWithValue("to", Entry.DateToTime(to));

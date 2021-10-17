@@ -8,7 +8,7 @@ namespace HnTrends.Database
 
     public static class StoryTable
     {
-        public static void Write(Entry entry, SqliteConnection connection)
+        public static void Write(Entry entry, SqliteConnection connection, SqliteTransaction transaction)
         {
             if (entry == null)
             {
@@ -19,7 +19,7 @@ namespace HnTrends.Database
 VALUES(@id, @title, @url, @time);
 
 INSERT INTO search_target(id, title) VALUES (@id, @title);", 
-                connection);
+                connection, transaction);
 
             command.Parameters.AddWithValue("id", entry.Id);
             command.Parameters.AddWithValue("title", entry.Title);

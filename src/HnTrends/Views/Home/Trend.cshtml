@@ -1,4 +1,5 @@
-﻿@model TrendViewModel
+﻿@using System.Net
+@model TrendViewModel
 @{
     ViewData["Title"] = $"Trend: {Model.Term}";
 }
@@ -48,9 +49,9 @@ else
 
     <div id="terms-list">
         <p>View raw data for your terms:</p>
-        <ul>
+        <ul id="terms-list-list">
             <li>
-                <a href="/api/results/@Model.Term" target="_blank">@Model.Term</a>
+                <a href="/api/results/@WebUtility.UrlEncode(Model.Term)" target="_blank">@Model.Term</a>
             </li>
         </ul>
     </div>

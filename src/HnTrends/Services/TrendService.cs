@@ -102,11 +102,26 @@
 
         private async Task<IReadOnlyList<LocatedEntry>> Search(string searchTerm)
         {
-            var command = new SqliteCommand(
-                @"SELECT time, title FROM search_target WHERE title MATCH @query;",
+            var trimmedTerm = searchTerm.Trim('"');
+
+            var termHasDotPrefix = trimmedTerm.Length > 0 && trimmedTerm[0] == '.';
+
+            var sql = "SELECT time FROM search_target WHERE title MATCH @query";
+
+            if (termHasDotPrefix)
+            {
+                sql += " AND title LIKE @likeQuery;";
+            }
+
+            var command = new SqliteCommand(sql,
                 connection);
 
             command.Parameters.AddWithValue("query", searchTerm);
+
+            if (termHasDotPrefix)
+            {
+                command.Parameters.AddWithValue("likeQuery", $"%{trimmedTerm}%");
+            }
 
             using var reader = await command.ExecuteReaderAsync();
 
@@ -119,7 +134,6 @@
                 }
 
                 var unixTs = reader.GetInt64(0);
-                var title = reader.GetString(1);
 
                 results.Add(new LocatedEntry(Entry.TimeToDate(unixTs)));
             }
@@ -129,15 +143,30 @@
 
         private async Task<IReadOnlyList<EntryWithScore>> SearchFull(string searchTerm)
         {
-            var command = new SqliteCommand(
-                @"
+            var trimmedTerm = searchTerm.Trim('"');
+
+            var termHasDotPrefix = trimmedTerm.Length > 0 && trimmedTerm[0] == '.';
+
+            var sql = @"  
                     SELECT s.id, s.title, s.url, bm25(search_target) FROM search_target as st
                     INNER JOIN story as s
                     ON s.id = st.id
-                    WHERE st.title MATCH @query;",
+                    WHERE st.title MATCH @query";
+
+            if (termHasDotPrefix)
+            {
+                sql += " AND st.title LIKE @likeQuery";
+            }
+
+            var command = new SqliteCommand(sql,
                 connection);
 
             command.Parameters.AddWithValue("query", searchTerm);
+
+            if (termHasDotPrefix)
+            {
+                command.Parameters.AddWithValue("likeQuery", $"%{trimmedTerm}%");
+            }
 
             using var reader = await command.ExecuteReaderAsync();
 
