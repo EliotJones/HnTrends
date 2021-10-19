@@ -60,6 +60,7 @@
             services.AddSingleton<ITrendService, TrendService>();
 
             services.AddHostedService<UpdateDataBackgroundService>();
+            services.AddHostedService<UpdateScoresBackgroundService>();
 
             services.AddControllersWithViews(c => c.EnableEndpointRouting = false).SetCompatibilityVersion(CompatibilityVersion.Version_3_0);
         }
