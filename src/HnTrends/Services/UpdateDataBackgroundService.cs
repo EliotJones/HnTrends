@@ -7,7 +7,7 @@
     using System.Threading.Tasks;
     using Caches;
     using Crawler;
-    using Microsoft.Data.Sqlite;
+    using Database;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
     using Microsoft.Extensions.Options;
@@ -18,7 +18,7 @@
     /// </summary>
     internal class UpdateDataBackgroundService : BackgroundService
     {
-        private readonly SqliteConnection connection;
+        private readonly IConnectionFactory connectionFactory;
         private readonly HttpClient client;
         private readonly ICacheManager cacheManager;
         private readonly ILogger<UpdateDataBackgroundService> logger;
@@ -27,13 +27,13 @@
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
         public UpdateDataBackgroundService(
-            SqliteConnection connection,
+            IConnectionFactory connectionFactory,
             HttpClient client,
             ICacheManager cacheManager,
             IOptions<TimingOptions> timingOptions,
             ILogger<UpdateDataBackgroundService> logger)
         {
-            this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
+            this.connectionFactory = connectionFactory;
             this.client = client ?? throw new ArgumentNullException(nameof(client));
             this.cacheManager = cacheManager;
             this.logger = logger;
@@ -52,7 +52,7 @@
 
                     logger.LogInformation("Running background update.");
 
-                    var updateTask = new CrawlTask(connection, client, 1);
+                    var updateTask = new CrawlTask(connectionFactory, client, 1);
 
                     await updateTask.Run(stoppingToken);
 

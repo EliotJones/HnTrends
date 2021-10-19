@@ -20,13 +20,13 @@ namespace HnTrends.Crawler
 
         private static readonly Random Random = new Random(250);
 
-        private readonly SqliteConnection connection;
+        private readonly IConnectionFactory connectionFactory;
         private readonly HttpClient httpClient;
         private readonly byte maxThreads;
 
-        public CrawlTask(SqliteConnection connection, HttpClient httpClient, byte maxThreads)
+        public CrawlTask(IConnectionFactory connectionFactory, HttpClient httpClient, byte maxThreads)
         {
-            this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
+            this.connectionFactory = connectionFactory;
             this.httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
 
             if (maxThreads < 1)
@@ -39,6 +39,8 @@ namespace HnTrends.Crawler
 
         public async Task Run(CancellationToken cancellationToken = default(CancellationToken))
         {
+            using var connection = connectionFactory.Open();
+
             LastWriteTable.TryRead(connection, out var lastId);
 
             DateTime max;
@@ -109,7 +111,7 @@ namespace HnTrends.Crawler
                 {
                     Trace.WriteLine("Flushing to database.");
 
-                    WriteEntries(entries.OrderBy(x => x.Id), i + interval - 1, ref min, ref max);
+                    WriteEntries(entries.OrderBy(x => x.Id), connection, i + interval - 1, ref min, ref max);
 
                     entries.Clear();
                 }
@@ -119,7 +121,7 @@ namespace HnTrends.Crawler
             {
                 Trace.WriteLine("Flushing to database.");
 
-                WriteEntries(entries.OrderBy(x => x.Id), maxItem, ref min, ref max);
+                WriteEntries(entries.OrderBy(x => x.Id), connection, maxItem, ref min, ref max);
             }
         }
 
@@ -167,7 +169,7 @@ namespace HnTrends.Crawler
             }
         }
 
-        private void WriteEntries(IEnumerable<Entry> entries, int maxId, ref DateTime min, ref DateTime max)
+        private void WriteEntries(IEnumerable<Entry> entries, SqliteConnection connection, int maxId, ref DateTime min, ref DateTime max)
         {
             using (var transaction = connection.BeginTransaction())
             {

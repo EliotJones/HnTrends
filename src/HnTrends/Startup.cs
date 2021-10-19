@@ -1,6 +1,7 @@
 ﻿namespace HnTrends
 {
     using Caches;
+    using Database;
     using Microsoft.AspNetCore.Builder;
     using Microsoft.AspNetCore.Hosting;
     using Microsoft.AspNetCore.Http;
@@ -45,13 +46,7 @@
                 Timeout = TimeSpan.FromMinutes(1)
             });
 
-            services.AddSingleton(x =>
-            {
-                var str = x.GetService<IOptions<FileLocations>>().Value.Database;
-                var conn = new SqliteConnection($"Data Source={str}");
-                conn.Open();
-                return conn;
-            });
+            services.AddSingleton<IConnectionFactory, ConnectionFactory>();
 
             services.AddSingleton<ICacheManager, CacheManager>();
             services.AddSingleton<IPostCountsCache, PostCountsCache>();

@@ -1,10 +1,7 @@
-﻿using Microsoft.Data.Sqlite;
-
-namespace HnTrends.Caches
+﻿namespace HnTrends.Caches
 {
     using System;
     using System.Collections.Generic;
-    using System.Data;
     using Database;
     using Microsoft.Extensions.Caching.Memory;
 
@@ -13,17 +10,12 @@ namespace HnTrends.Caches
         private static readonly object Lock = new object();
 
         private readonly IMemoryCache memoryCache;
-        private readonly SqliteConnection connection;
+        private readonly IConnectionFactory connectionFactory;
 
-        public PostCountsCache(IMemoryCache memoryCache, ICacheManager cacheManager, SqliteConnection connection)
+        public PostCountsCache(IMemoryCache memoryCache, ICacheManager cacheManager, IConnectionFactory connectionFactory)
         {
             this.memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
-            this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
-            
-            if (this.connection.State == ConnectionState.Closed)
-            {
-                throw new ArgumentException("Connection was closed.", nameof(connection));
-            }
+            this.connectionFactory = connectionFactory;
 
             cacheManager.Register(nameof(PostCountsByDay));
         }
@@ -37,6 +29,7 @@ namespace HnTrends.Caches
                     return cachedResult;
                 }
 
+                using var connection = connectionFactory.Open();
                 if (!DateRangeTable.TryRead(connection, out var range))
                 {
                     throw new InvalidOperationException("Empty date range table in SQLite database.");

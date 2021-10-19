@@ -6,22 +6,23 @@
     using System.Threading.Tasks;
     using Caches;
     using Core;
+    using Database;
     using Microsoft.Data.Sqlite;
     using ViewModels;
 
     internal class TrendService : ITrendService
     {
-        private readonly SqliteConnection connection;
+        private readonly IConnectionFactory connectionFactory;
         private readonly IPostCountsCache postCountsCache;
         private readonly IStoryCountCache storyCountCache;
         private readonly IResultsCache resultsCache;
 
-        public TrendService(SqliteConnection connection,
+        public TrendService(IConnectionFactory connectionFactory,
             IPostCountsCache postCountsCache,
             IStoryCountCache storyCountCache,
             IResultsCache resultsCache)
         {
-            this.connection = connection;
+            this.connectionFactory = connectionFactory;
             this.postCountsCache = postCountsCache ?? throw new ArgumentNullException(nameof(postCountsCache));
             this.storyCountCache = storyCountCache ?? throw new ArgumentNullException(nameof(storyCountCache));
             this.resultsCache = resultsCache ?? throw new ArgumentNullException(nameof(resultsCache));
@@ -113,6 +114,8 @@
                 sql += " AND title LIKE @likeQuery;";
             }
 
+            await using var connection = connectionFactory.Open();
+
             var command = new SqliteCommand(sql,
                 connection);
 
@@ -157,6 +160,8 @@
             {
                 sql += " AND st.title LIKE @likeQuery";
             }
+
+            await using var connection = connectionFactory.Open();
 
             var command = new SqliteCommand(sql,
                 connection);

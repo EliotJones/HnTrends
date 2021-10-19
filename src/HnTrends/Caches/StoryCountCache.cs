@@ -1,6 +1,4 @@
-﻿using Microsoft.Data.Sqlite;
-
-namespace HnTrends.Caches
+﻿namespace HnTrends.Caches
 {
     using System;
     using Database;
@@ -11,12 +9,12 @@ namespace HnTrends.Caches
         private static readonly object Lock = new object();
 
         private readonly IMemoryCache memoryCache;
-        private readonly SqliteConnection connection;
+        private readonly IConnectionFactory connectionFactory;
 
-        public StoryCountCache(IMemoryCache memoryCache, ICacheManager cacheManager, SqliteConnection connection)
+        public StoryCountCache(IMemoryCache memoryCache, ICacheManager cacheManager, IConnectionFactory connectionFactory)
         {
             this.memoryCache = memoryCache ?? throw new ArgumentNullException(nameof(memoryCache));
-            this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
+            this.connectionFactory = connectionFactory;
 
             cacheManager.Register(nameof(StoryCountCache));
         }
@@ -29,6 +27,8 @@ namespace HnTrends.Caches
                 {
                     return value;
                 }
+
+                using var connection = connectionFactory.Open();
 
                 value = StoryTable.GetCount(connection);
 

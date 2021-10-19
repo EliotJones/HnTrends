@@ -31,9 +31,13 @@ namespace HnTrends
 
             var webHost = CreateWebHostBuilder(args).Build();
 
-            var conn = (SqliteConnection)webHost.Services.GetService(typeof(SqliteConnection));
+            var connFac = ((IConnectionFactory)webHost.Services.GetService(typeof(IConnectionFactory)));
 
-            await Migrate(conn);
+            using (var connection = connFac.Open())
+            {
+                connection.Open();
+                await Migrate(connection);
+            }
 
             await webHost.RunAsync();
         }

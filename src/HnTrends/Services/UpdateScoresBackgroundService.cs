@@ -1,6 +1,7 @@
 ﻿namespace HnTrends.Services
 {
     using Core;
+    using Database;
     using Microsoft.Data.Sqlite;
     using Microsoft.Extensions.Hosting;
     using Microsoft.Extensions.Logging;
@@ -14,18 +15,18 @@
 
     internal class UpdateScoresBackgroundService : BackgroundService
     {
-        private readonly SqliteConnection connection;
+        private readonly IConnectionFactory connectionFactory;
         private readonly HttpClient client;
         private readonly ILogger<UpdateScoresBackgroundService> logger;
 
         private readonly SemaphoreSlim semaphore = new SemaphoreSlim(1, 1);
 
         public UpdateScoresBackgroundService(
-            SqliteConnection connection,
+            IConnectionFactory connectionFactory,
             HttpClient client,
             ILogger<UpdateScoresBackgroundService> logger)
         {
-            this.connection = connection ?? throw new ArgumentNullException(nameof(connection));
+            this.connectionFactory = connectionFactory;
             this.client = client ?? throw new ArgumentNullException(nameof(client));
             this.logger = logger;
 
@@ -39,11 +40,14 @@
             {
                 try
                 {
+
+                    using var connection = connectionFactory.Open();
+
                     await semaphore.WaitAsync(stoppingToken);
 
                     logger.LogInformation("Running background update of scores.");
 
-                    var ids = await GetEntriesToUpdate(stoppingToken);
+                    var ids = await GetEntriesToUpdate(stoppingToken, connection);
 
                     logger.LogInformation($"Found {ids.Count} stories to update the score for.");
 
@@ -108,7 +112,7 @@
             }
         }
 
-        private async Task<IReadOnlyList<int>> GetEntriesToUpdate(CancellationToken token)
+        private async Task<IReadOnlyList<int>> GetEntriesToUpdate(CancellationToken token, SqliteConnection connection)
         {
             // 3 weeks ago.
             var bound = DateTime.UtcNow.AddDays(-3 * 7);
