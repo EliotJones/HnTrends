@@ -6,6 +6,7 @@
     using System.Threading.Tasks;
     using Crawler;
     using Database;
+    using Microsoft.Data.Sqlite;
 
     public static class Program
     {
@@ -18,12 +19,30 @@
         public static async Task Main(string[] args)
         {
             Trace.Listeners.Add(MyConsoleListener.Instance);
-            
-            using (var connection = Connector.ConnectToFile(@"C:\git\csharp\hn-reader\data\hn-data.sqlite"))
+
+            var connectionFactory = new MyConnectionFactory(@"C:\git\csharp\hn-reader\data\hn-data.sqlite");
+
+            var crawlTask = new CrawlTask(connectionFactory, Client, 3);
+
+            await crawlTask.Run();
+        }
+
+        private class MyConnectionFactory : IConnectionFactory
+        {
+            private readonly string connectionString;
+
+            public MyConnectionFactory(string connectionString)
             {
-                var crawlTask = new CrawlTask(connection, Client, 3);
-                
-                await crawlTask.Run();
+                this.connectionString = connectionString;
+            }
+
+            public SqliteConnection Open()
+            {
+                var connection = Connector.ConnectToFile(connectionString);
+
+                connection.Open();
+
+                return connection;
             }
         }
     }

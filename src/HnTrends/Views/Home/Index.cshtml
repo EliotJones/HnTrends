@@ -45,7 +45,6 @@
     <script>
         $("#search").on('input', function() {
             var text = $(this).val();
-            console.log(text)
             var hasSpace = text.indexOf(' ') > 0;
             if (hasSpace) {
                 $("#allwords-label").show();

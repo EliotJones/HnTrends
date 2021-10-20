@@ -1,5 +1,27 @@
 ﻿var categories = ["Day", "Week", "Month"];
 
+var count = "Count";
+var percent = "Percent";
+var score = "Score";
+
+document.states = {
+    Count: {
+        next: percent,
+        label: '# of stories',
+        nextButtonText: 'Display as % of stories'
+    },
+    Percent: {
+        next: score,
+        label: '% of stories',
+        nextButtonText: 'Display as score of stories'
+    },
+    Score: {
+        next: count,
+        label: 'Story score (sum)',
+        nextButtonText: 'Display as # of stories'
+    }
+}
+
 function addDays(date, days) {
     var result = new Date(date);
     result.setDate(result.getDate() + days);
@@ -37,24 +59,28 @@ function buildXAxis(data, period) {
     };
 }
 
-function buildYAxis(data, isCount) {
-    var maxBySeries = isCount
+function buildYAxis(data, trendType) {
+    var maxBySeries = trendType === count
         ? data.ys.map(series => Math.max.apply(Math, series))
-        : data.percents.map(series => Math.max.apply(Math, series));
+        : trendType === percent ? data.percents.map(series => Math.max.apply(Math, series))
+            : data.scores.map(series => Math.max.apply(Math, series));
+
+    var label = document.states[trendType].label;
+
     var max = Math.max.apply(Math, maxBySeries);
     return {
-        range: [0, isCount ? (max + 1) : max + 0.1],
+        range: [0, trendType !== percent ? (max + 1) : max + 0.1],
         linecolor: '#333',
         linewidth: 1,
-        title: isCount ? '# of stories' : '% of total stories'
+        title: label
     };
 }
 
-function getPlotlyLayout(data, isCount, period) {
+function getPlotlyLayout(data, trendType, period) {
     return {
         xaxis: buildXAxis(data, period),
-        yaxis: buildYAxis(data, isCount),
-        title: `Posts over time for \'${data.names[0]}\'.`,
+        yaxis: buildYAxis(data, trendType),
+        title: `Posts over time for '${data.names[0]}'.`,
         hovermode: 'closest'
     };
 }
@@ -73,11 +99,13 @@ function dataForPeriod(data, others, period, skipLast) {
     var dateLabels = [];
     var counts = [[]];
     var percents = [[]];
+    var scores = [[]];
     var names = [data.Term];
 
     others.forEach(x => {
         counts.push([]);
         percents.push([]);
+        scores.push([]);
         names.push(x.term + (x.allWords ? '' : ' (any)'));
     });
 
@@ -93,6 +121,7 @@ function dataForPeriod(data, others, period, skipLast) {
                     others,
                     counts,
                     percents,
+                    scores,
                     previous,
                     x => window.moment(x).endOf('week').toDate());
                 previous = x;
@@ -105,6 +134,7 @@ function dataForPeriod(data, others, period, skipLast) {
                     others,
                     counts,
                     percents,
+                    scores,
                     previous,
                     x => window.moment(x).startOf('month').toDate());
                 previous = x;
@@ -114,9 +144,11 @@ function dataForPeriod(data, others, period, skipLast) {
                 dateLabels.push(x);
 
                 counts[0].push(data.Counts[i]);
+                scores[0].push(data.Scores[i]);
                 percents[0].push((data.Counts[i] / data.DailyTotals[i]) * 100);
                 others.forEach((o, oi) => {
                     counts[oi + 1].push(o.counts[i]);
+                    scores[oi + 1].push(o.scores[i]);
                     percents[oi + 1].push(((o.counts[i] / data.DailyTotals[i]) * 100).toFixed(2));
                 });
                 break;
@@ -143,6 +175,7 @@ function dataForPeriod(data, others, period, skipLast) {
     return {
         ys: counts,
         percents: percents,
+        scores: scores,
         x: dateLabels,
         names: names
     };
@@ -155,10 +188,12 @@ function groupDataPointsByPeriod(data,
     others,
     counts,
     percents,
+    scores,
     previous,
     periodGrouper) {
     var dayCount = data.Counts[index];
     var dayTotal = data.DailyTotals[index];
+    var dayScore = data.Scores[index];
 
     var isNewPeriod = false;
     var periodForThisDate = periodGrouper(date);
@@ -178,28 +213,33 @@ function groupDataPointsByPeriod(data,
     if (isNewPeriod) {
         counts[0].push(dayCount);
         percents[0].push(dayTotal);
+        scores[0].push(dayScore);
+
         others.forEach((o, oi) => {
             counts[oi + 1].push(o.counts[index]);
             percents[oi + 1].push(dayTotal);
+            scores[oi + 1].push(o.Scores[index]);
         });
     } else {
         var periodIndex = counts[0].length - 1;
         counts[0][periodIndex] += dayCount;
         percents[0][periodIndex] += dayTotal;
+        scores[0][periodIndex] += dayScore;
         others.forEach((o, oi) => {
             counts[oi + 1][periodIndex] += o.counts[index];
             percents[oi + 1][periodIndex] += dayTotal;
+            scores[oi + 1][periodIndex] += dayScore;
         });
     }
 }
 
-function getPlotlyData(data, isCount, period) {
+function getPlotlyData(data, trendType, period) {
     var isMonthly = period === "Month";
     var width = !isMonthly ? 1 : data.ys.length === 1 ? 2 : 1;
     return data.ys.map((ySeries, i) => {
         return {
             x: data.x,
-            y: isCount ? ySeries : data.percents[i],
+            y: trendType === count ? ySeries : trendType === percent ? data.percents[i] : data.scores[i],
             type: 'scatter',
             mode: period !== "Day" ? 'lines' : 'markers',
             marker: {
@@ -236,32 +276,35 @@ function togglePeriod(period) {
 
     $("#period").text(period);
 
-    var isCount = document.hntrendstore.isCount;
+    var trendType = document.hntrendstore.trendType;
     var data = dataForPeriod(loadDataFromHiddenInput(),
         document.hntrendstore.others,
         document.hntrendstore.CurrentCategory,
         getSkipLast());
     
     window.Plotly.newPlot(getPlotlyElement(),
-        getPlotlyData(data, isCount, document.hntrendstore.CurrentCategory),
-        getPlotlyLayout(data, isCount, document.hntrendstore.CurrentCategory),
+        getPlotlyData(data, trendType, document.hntrendstore.CurrentCategory),
+        getPlotlyLayout(data, trendType, document.hntrendstore.CurrentCategory),
         getModeBarSettings());
 }
 
-function togglePercent() {
-    var current = document.hntrendstore.isCount;
-    var isCount = !current;
+function switchTrendType() {
+    var current = document.hntrendstore.trendType;
+    var currentState = document.states[current];
+    var newTrendType = currentState.next;
 
-    $('#percent').text(isCount ? 'Display as % of total stories' : 'Display as # of stories');
-    document.hntrendstore.isCount = isCount;
+    var newState = document.states[newTrendType];
+
+    $('#percent').text(newState.nextButtonText);
+    document.hntrendstore.trendType = newTrendType;
     var data = dataForPeriod(loadDataFromHiddenInput(),
         document.hntrendstore.others,
         document.hntrendstore.CurrentCategory,
         getSkipLast());
     
     window.Plotly.newPlot(getPlotlyElement(),
-        getPlotlyData(data, isCount, document.hntrendstore.CurrentCategory),
-        getPlotlyLayout(data, isCount, document.hntrendstore.CurrentCategory),
+        getPlotlyData(data, newTrendType, document.hntrendstore.CurrentCategory),
+        getPlotlyLayout(data, newTrendType, document.hntrendstore.CurrentCategory),
         getModeBarSettings());
 }
 
@@ -318,7 +361,7 @@ $("#text").keyup(event => {
 $(function () {
 
     document.hntrendstore = {
-        isCount: true,
+        trendType: count,
         CurrentCategory: "Month",
         others: []
     };
@@ -342,7 +385,7 @@ $(function () {
     var data = dataForPeriod(json, [], document.hntrendstore.CurrentCategory, getSkipLast());
     
     window.Plotly.plot(getPlotlyElement(),
-        getPlotlyData(data, true, document.hntrendstore.CurrentCategory),
-        getPlotlyLayout(data, true, document.hntrendstore.CurrentCategory),
+        getPlotlyData(data, count, document.hntrendstore.CurrentCategory),
+        getPlotlyLayout(data, count, document.hntrendstore.CurrentCategory),
         getModeBarSettings());
 });

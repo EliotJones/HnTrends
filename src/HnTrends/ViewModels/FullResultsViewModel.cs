@@ -20,6 +20,8 @@
 
         public string Url { get; set; }
 
-        public double Score { get; set; }
+        public double Rank { get; set; }
+
+        public int Score { get; set; }
     }
 }

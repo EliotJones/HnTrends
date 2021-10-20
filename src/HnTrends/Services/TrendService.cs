@@ -42,26 +42,37 @@
                 var searchResults = await Search(searchTerm);
 
                 var counts = new List<ushort>();
+                var scores = new List<int>();
                 var maxCount = 0;
 
                 for (var i = 0; i < countsByDay.Days.Count; i++)
                 {
                     var date = countsByDay.Days[i];
+                    scores.Add(0);
+                    counts.Add(0);
 
-                    var onDate = searchResults.Count(x => x.Date.Date == date.Date);
+                    var onDate = searchResults.Where(x => x.Date.Date == date.Date);
 
-                    counts.Add((ushort)onDate);
-
-                    if (onDate > maxCount)
+                    var count = 0;
+                    foreach (var locatedEntry in onDate)
                     {
-                        maxCount = onDate;
+                        scores[i] += locatedEntry.Score;
+                        count++;
+                    }
+
+                    counts[i] = (ushort)count;
+
+                    if (count > maxCount)
+                    {
+                        maxCount = count;
                     }
                 }
 
                 cached = new CachedResult
                 {
                     Counts = counts,
-                    MaxCount = maxCount
+                    MaxCount = maxCount,
+                    Scores = scores
                 };
 
                 if (searchResults.Count > 1000)
@@ -76,7 +87,8 @@
                 Start = countsByDay.Min,
                 End = countsByDay.Max,
                 CountMax = cached.MaxCount,
-                DailyTotals = countsByDay.PostsPerDay
+                DailyTotals = countsByDay.PostsPerDay,
+                Scores = cached.Scores
             };
 
             return result;
@@ -107,11 +119,11 @@
 
             var termHasDotPrefix = trimmedTerm.Length > 0 && trimmedTerm[0] == '.';
 
-            var sql = "SELECT time FROM search_target WHERE title MATCH @query";
+            var sql = "SELECT st.time, s.score FROM search_target as st INNER JOIN story as s ON s.id = st.id WHERE st.title MATCH @query";
 
             if (termHasDotPrefix)
             {
-                sql += " AND title LIKE @likeQuery;";
+                sql += " AND st.title LIKE @likeQuery;";
             }
 
             await using var connection = connectionFactory.Open();
@@ -138,7 +150,13 @@
 
                 var unixTs = reader.GetInt64(0);
 
-                results.Add(new LocatedEntry(Entry.TimeToDate(unixTs)));
+                int score = 1;
+                if (!reader.IsDBNull(1))
+                {
+                    score = reader.GetInt32(1);
+                }
+
+                results.Add(new LocatedEntry(Entry.TimeToDate(unixTs), score));
             }
 
             return results;
@@ -151,7 +169,7 @@
             var termHasDotPrefix = trimmedTerm.Length > 0 && trimmedTerm[0] == '.';
 
             var sql = @"  
-                    SELECT s.id, s.title, s.url, bm25(search_target) FROM search_target as st
+                    SELECT s.id, s.title, s.url, bm25(search_target), s.score FROM search_target as st
                     INNER JOIN story as s
                     ON s.id = st.id
                     WHERE st.title MATCH @query";
@@ -186,14 +204,21 @@
                 var id = reader.GetInt32(0);
                 var title = reader.GetString(1);
                 var url = reader.GetString(2);
-                var score = reader.GetDouble(3);
+                var rank = reader.GetDouble(3);
+                var score = 1;
+                if (!reader.IsDBNull(4))
+                {
+                    score = reader.GetInt32(4);
+                }
+
 
                 results.Add(new EntryWithScore
                 {
                     Id = id,
-                    Score = score,
+                    Rank = rank,
                     Title = title,
-                    Url = url
+                    Url = url,
+                    Score = score
                 });
             }
 
@@ -210,9 +235,12 @@
     {
         public DateTime Date { get; }
 
-        public LocatedEntry(DateTime date)
+        public int Score { get; set; }
+
+        public LocatedEntry(DateTime date, int score)
         {
             Date = date;
+            Score = score;
         }
     }
 }

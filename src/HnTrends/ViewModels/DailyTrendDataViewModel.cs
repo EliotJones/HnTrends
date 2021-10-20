@@ -11,6 +11,8 @@
 
         public List<ushort> Counts { get; set; }
 
+        public List<int> Scores { get; set; }
+
         public List<ushort> DailyTotals { get; set; }
 
         public int CountMax { get; set; }
