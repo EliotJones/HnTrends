@@ -53,6 +53,8 @@
 
                     var scoresById = new Dictionary<int, int>();
 
+                    var processedCount = 0;
+
                     foreach (var id in ids)
                     {
                         try
@@ -80,7 +82,7 @@
                         if (scoresById.Count > 50)
                         {
                             var sql = "UPDATE story SET score = @score WHERE id = @id;";
-                            using var transaction = connection.BeginTransaction();
+                            await using var transaction = connection.BeginTransaction();
 
                             var command = new SqliteCommand(sql, connection, transaction);
 
@@ -94,6 +96,13 @@
                             }
 
                             transaction.Commit();
+                        }
+
+                        processedCount++;
+
+                        if (processedCount % 1000 == 0)
+                        {
+                            logger.LogInformation($"{ids.Count - processedCount} scores remaining to sync.");
                         }
                     }
 
