@@ -48,7 +48,8 @@
             {
                 Counts = results.Counts,
                 Term = originalTerm,
-                AllWords = allWords
+                AllWords = allWords,
+                Scores = results.Scores
             });
         }
     }
