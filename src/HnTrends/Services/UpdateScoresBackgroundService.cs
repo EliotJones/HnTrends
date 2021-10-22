@@ -71,12 +71,12 @@
 
                             scoresById[id] = item.Score;
 
-                            await Task.Delay(TimeSpan.FromMilliseconds(random.Next(10, 100)), stoppingToken);
+                            await Task.Delay(TimeSpan.FromMilliseconds(random.Next(2, 30)), stoppingToken);
                         }
                         catch (Exception ex)
                         {
                             logger.LogError(ex, $"Failed getting item with id: {id}.");
-                            await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
+                            await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
                         }
 
                         if (scoresById.Count > 50)
