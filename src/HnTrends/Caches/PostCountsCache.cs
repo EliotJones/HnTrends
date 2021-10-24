@@ -1,8 +1,10 @@
 ﻿namespace HnTrends.Caches
 {
+    using Core;
     using System;
     using System.Collections.Generic;
     using Database;
+    using Microsoft.Data.Sqlite;
     using Microsoft.Extensions.Caching.Memory;
 
     internal class PostCountsCache : IPostCountsCache
@@ -30,51 +32,50 @@
                 }
 
                 using var connection = connectionFactory.Open();
-                if (!DateRangeTable.TryRead(connection, out var range))
-                {
-                    throw new InvalidOperationException("Empty date range table in SQLite database.");
-                }
 
-                var min = range.from;
-                var max = range.to;
+                const int minTimestamp = 1160418111;
 
-                var totalsByDay = new Dictionary<DateTime, ushort>();
-
-                foreach (var entry in StoryTable.GetEntries(connection))
-                {
-                    var day = entry.Date.Date;
-
-                    if (!totalsByDay.ContainsKey(day))
-                    {
-                        totalsByDay[day] = 1;
-                    }
-                    else
-                    {
-                        totalsByDay[day]++;
-                    }
-                }
+                var sql = $@"
+                    WITH RECURSIVE
+                        dateseq(x) AS
+                        (
+                            SELECT 0
+                            UNION ALL
+                            SELECT x+1 FROM dateseq
+                            LIMIT 
+                            (
+                                SELECT ((julianday('now', 'start of day') - julianday(DATE({minTimestamp}, 'unixepoch')))) + 1
+                            )
+                      )
+                    SELECT  d.startday,
+                            (SELECT COUNT(*) FROM story WHERE time >= d.startday AND time < d.endday) as storycount
+                    FROM 
+                    (
+                        SELECT  strftime('%s', date(julianday(DATE({minTimestamp}, 'unixepoch')), '+' || x || ' days')) as startday,
+                                strftime('%s', date(julianday(DATE({minTimestamp}, 'unixepoch')), '+' || (x+1) || ' days')) as endday
+                        FROM dateseq
+                    ) as d;";
 
                 var days = new List<DateTime>();
                 var counts = new List<ushort>();
 
-                var current = min;
-                while (current.Date < max.Date)
+                using var query = new SqliteCommand(sql, connection);
+
+                using (var reader = query.ExecuteReader())
                 {
-                    days.Add(current.Date);
-
-                    if (totalsByDay.TryGetValue(current.Date, out var count))
+                    while (reader.Read())
                     {
-                        counts.Add(count);
-                    }
-                    else
-                    {
-                        counts.Add(0);
-                    }
+                        if (reader.IsDBNull(0))
+                        {
+                            continue;
+                        }
 
-                    current = current.AddDays(1);
+                        days.Add(Entry.TimeToDate(reader.GetInt64(0)));
+                        counts.Add((ushort)reader.GetInt32(1));
+                    }
                 }
 
-                cachedResult = new PostCountsByDay(min, max, counts, days);
+                cachedResult = new PostCountsByDay(days[0], days[^1], counts, days);
 
                 memoryCache.Set(nameof(PostCountsByDay), cachedResult);
 
