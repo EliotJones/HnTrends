@@ -7,8 +7,10 @@
     using Microsoft.Extensions.Logging;
     using Newtonsoft.Json;
     using System;
+    using System.Collections.Concurrent;
     using System.Collections.Generic;
     using System.Diagnostics;
+    using System.Linq;
     using System.Net.Http;
     using System.Threading;
     using System.Threading.Tasks;
@@ -40,8 +42,10 @@
             {
                 try
                 {
+                    const int threadCount = 2;
+                    const int threadBucketSize = 30;
 
-                    using var connection = connectionFactory.Open();
+                    await using var connection = connectionFactory.Open();
 
                     await semaphore.WaitAsync(stoppingToken);
 
@@ -51,54 +55,57 @@
 
                     logger.LogInformation($"Found {ids.Count} stories to update the score for.");
 
-                    var scoresById = new Dictionary<int, int>();
-
+                    var startIndex = 0;
                     var processedCount = 0;
 
-                    foreach (var id in ids)
+                    var scoresById = new ConcurrentDictionary<int, int>();
+
+                    while (startIndex < ids.Count)
                     {
-                        try
-                        {
-                            var response = await client
-                                .GetStringAsync($"https://hacker-news.firebaseio.com/v0/item/{id}.json");
-
-                            if (string.IsNullOrWhiteSpace(response))
+                        var tasks = Enumerable.Range(0, threadCount).Select(async i =>
                             {
-                                continue;
-                            }
+                                var items = ids.Skip(startIndex + i * threadBucketSize).Take(threadBucketSize);
 
-                            var item = JsonConvert.DeserializeObject<HnStoryPartial>(response);
+                                foreach (var id in items)
+                                {
+                                    var response = await client
+                                    .GetStringAsync($"https://hacker-news.firebaseio.com/v0/item/{id}.json");
 
-                            scoresById[id] = item.Score;
+                                    if (string.IsNullOrWhiteSpace(response))
+                                    {
+                                        return;
+                                    }
 
-                            await Task.Delay(TimeSpan.FromMilliseconds(random.Next(2, 30)), stoppingToken);
-                        }
-                        catch (Exception ex)
+                                    var item = JsonConvert.DeserializeObject<HnStoryPartial>(response);
+
+                                    scoresById.AddOrUpdate(id, item.Score, (x, y) => item.Score);
+
+                                    await Task.Delay(TimeSpan.FromMilliseconds(random.Next(2, 20)), stoppingToken);
+                                }
+                            });
+
+                        await Task.WhenAll(tasks);
+
+                        startIndex += threadCount * threadBucketSize;
+
+                        const string sql = "UPDATE story SET score = @score WHERE id = @id;";
+                        await using var transaction = connection.BeginTransaction();
+
+                        var command = new SqliteCommand(sql, connection, transaction);
+
+                        foreach (var pair in scoresById)
                         {
-                            logger.LogError(ex, $"Failed getting item with id: {id}.");
-                            await Task.Delay(TimeSpan.FromSeconds(1), stoppingToken);
+                            command.Parameters.Clear();
+                            command.Parameters.AddWithValue("score", pair.Value);
+                            command.Parameters.AddWithValue("id", pair.Key);
+
+                            await command.ExecuteNonQueryAsync(stoppingToken);
                         }
 
-                        if (scoresById.Count > 50)
-                        {
-                            var sql = "UPDATE story SET score = @score WHERE id = @id;";
-                            await using var transaction = connection.BeginTransaction();
+                        transaction.Commit();
 
-                            var command = new SqliteCommand(sql, connection, transaction);
-
-                            foreach (var pair in scoresById)
-                            {
-                                command.Parameters.Clear();
-                                command.Parameters.AddWithValue("score", pair.Value);
-                                command.Parameters.AddWithValue("id", pair.Key);
-
-                                await command.ExecuteNonQueryAsync(stoppingToken);
-                            }
-
-                            transaction.Commit();
-                        }
-
-                        processedCount++;
+                        processedCount += scoresById.Count;
+                        scoresById.Clear();
 
                         if (processedCount % 1000 == 0)
                         {
