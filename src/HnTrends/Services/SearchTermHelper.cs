@@ -18,7 +18,7 @@
 
             var parts = text.Split(SplitChars, StringSplitOptions.RemoveEmptyEntries);
 
-            return string.Join(areAllWordsRequired ? " + " : " ", parts.Select(x => $"\"{x}\""));
+            return string.Join(areAllWordsRequired ? " " : " OR ", parts.Select(x => $"\"{x}\""));
         }
     }
 }

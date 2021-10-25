@@ -48,7 +48,8 @@
                 Data = JsonConvert.SerializeObject(resultData),
                 To = resultData.End,
                 From = resultData.Start,
-                MaxCount = resultData.CountMax
+                MaxCount = resultData.CountMax,
+                AllWords = allWords
             });
         }
 

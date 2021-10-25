@@ -340,7 +340,7 @@ $("#add-term").click(() => {
         .done(data => {
             $("#text").val('');
             addDataPlot(data);
-            $("#terms-list-list").append(`<li><a href="/api/results/${encodeURIComponent(term)}" target="_blank">${term}</a></li>`);
+            $("#terms-list-list").append(`<li><a href="/api/results/${encodeURIComponent(term)}?allWords=${allWords}" target="_blank">${term}</a></li>`);
         })
         .fail(err => {
             console.log(err);

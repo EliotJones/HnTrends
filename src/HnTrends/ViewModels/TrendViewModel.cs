@@ -13,5 +13,7 @@
         public DateTime To { get; set; }
 
         public int MaxCount { get; set; }
+
+        public bool AllWords { get; set; }
     }
 }

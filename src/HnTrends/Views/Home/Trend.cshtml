@@ -51,7 +51,7 @@ else
         <p>View raw data for your terms:</p>
         <ul id="terms-list-list">
             <li>
-                <a href="/api/results/@WebUtility.UrlEncode(Model.Term)" target="_blank">@Model.Term</a>
+                <a href="/api/results/@WebUtility.UrlEncode(Model.Term)?allWords=@Model.AllWords" target="_blank">@Model.Term</a>
             </li>
         </ul>
     </div>

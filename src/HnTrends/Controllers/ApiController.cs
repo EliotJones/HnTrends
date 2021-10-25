@@ -3,6 +3,7 @@
     using System.Threading.Tasks;
     using Microsoft.AspNetCore.Mvc;
     using Services;
+    using System.Net;
     using ViewModels;
 
     [ApiController]
@@ -24,9 +25,11 @@
 
         [Route("results/{term}")]
         [HttpGet]
-        public async Task<ActionResult> GetDataFull(string term)
+        public async Task<ActionResult> GetDataFull(string term, [FromQuery] bool allWords)
         {
-            term = SearchTermHelper.MakeSafeWordSearch(term, false);
+            term = WebUtility.UrlDecode(term);
+
+            term = SearchTermHelper.MakeSafeWordSearch(term, allWords);
 
             var full = await trendService.GetFullResultsForTermAsync(term)
                 .ConfigureAwait(false);
@@ -38,6 +41,8 @@
         [HttpGet]
         public async Task<ActionResult> GetPlotAggregateData(string term, [FromQuery] bool allWords)
         {
+            term = WebUtility.UrlDecode(term);
+
             var originalTerm = term;
 
             term = SearchTermHelper.MakeSafeWordSearch(term, allWords);
