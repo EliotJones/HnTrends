@@ -9,6 +9,8 @@
 
         public static string MakeSafeWordSearch(string text, bool areAllWordsRequired)
         {
+            text = text.Replace("\"", "\"\"");
+
             if (text.IndexOf(' ') < 0)
             {
                 return $"\"{text}\"";
