@@ -228,7 +228,7 @@ function groupDataPointsByPeriod(data,
         others.forEach((o, oi) => {
             counts[oi + 1][periodIndex] += o.counts[index];
             percents[oi + 1][periodIndex] += dayTotal;
-            scores[oi + 1][periodIndex] += dayScore;
+            scores[oi + 1][periodIndex] += o.scores[index];
         });
     }
 }
