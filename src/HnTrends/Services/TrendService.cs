@@ -113,6 +113,37 @@
             };
         }
 
+        public async Task<FullResultsViewModel> GetResultsForTermInPeriodTypeBeginning(string searchTerm, GroupingType grouping, DateTime startDateInclusive)
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+            {
+                throw new ArgumentException("Search term cannot be null or empty", nameof(searchTerm));
+            }
+
+            DateTime endDate;
+            switch (grouping)
+            {
+                case GroupingType.Day:
+                    endDate = startDateInclusive.AddDays(1);
+                    break;
+                case GroupingType.Week:
+                    endDate = startDateInclusive.AddDays(7);
+                    break;
+                default:
+                    endDate = startDateInclusive.AddMonths(1);
+                    break;
+            }
+
+            var results = await SearchFull(searchTerm, startDateInclusive, endDate);
+
+            return new FullResultsViewModel
+            {
+                Start = startDateInclusive,
+                DailyTotals = new List<ushort>(),
+                Results = results
+            };
+        }
+
         private async Task<IReadOnlyList<LocatedEntry>> Search(string searchTerm)
         {
             var trimmedTerm = searchTerm.Trim('"');
@@ -162,14 +193,14 @@
             return results;
         }
 
-        private async Task<IReadOnlyList<EntryWithScore>> SearchFull(string searchTerm)
+        private async Task<IReadOnlyList<EntryWithScore>> SearchFull(string searchTerm, DateTime? startDateInclusive = null, DateTime? endDateExclusive = null)
         {
             var trimmedTerm = searchTerm.Trim('"');
 
             var termHasDotPrefix = trimmedTerm.Length > 0 && trimmedTerm[0] == '.';
 
             var sql = @"  
-                    SELECT s.id, s.title, s.url, bm25(search_target), s.score FROM search_target as st
+                    SELECT s.id, s.title, s.url, bm25(search_target), s.score, st.time FROM search_target as st
                     INNER JOIN story as s
                     ON s.id = st.id
                     WHERE st.title MATCH @query";
@@ -177,6 +208,16 @@
             if (termHasDotPrefix)
             {
                 sql += " AND st.title LIKE @likeQuery";
+            }
+
+            if (startDateInclusive.HasValue)
+            {
+                sql += " AND st.time >= @startDate";
+            }
+
+            if (endDateExclusive.HasValue)
+            {
+                sql += " AND st.time < @endDate";
             }
 
             await using var connection = connectionFactory.Open();
@@ -191,7 +232,17 @@
                 command.Parameters.AddWithValue("likeQuery", $"%{trimmedTerm}%");
             }
 
-            using var reader = await command.ExecuteReaderAsync();
+            if (startDateInclusive.HasValue)
+            {
+                command.Parameters.AddWithValue("startDate", Entry.DateToTime(startDateInclusive.Value));
+            }
+
+            if (endDateExclusive.HasValue)
+            {
+                command.Parameters.AddWithValue("endDate", Entry.DateToTime(endDateExclusive.Value));
+            }
+
+            await using var reader = await command.ExecuteReaderAsync();
 
             var results = new List<EntryWithScore>();
             while (reader.Read())
@@ -211,6 +262,7 @@
                     score = reader.GetInt32(4);
                 }
 
+                var time = reader.GetInt64(5);
 
                 results.Add(new EntryWithScore
                 {
@@ -218,7 +270,8 @@
                     Rank = rank,
                     Title = title,
                     Url = url,
-                    Score = score
+                    Score = score,
+                    Time = Entry.TimeToDate(time)
                 });
             }
 

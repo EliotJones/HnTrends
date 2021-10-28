@@ -123,7 +123,7 @@ function dataForPeriod(data, others, period, skipLast) {
                     percents,
                     scores,
                     previous,
-                    x => window.moment(x).endOf('week').toDate());
+                    x => window.moment.utc(x).endOf('week').format('YYYY-MM-DD'));
                 previous = x;
                 break;
             case "Month":
@@ -136,7 +136,7 @@ function dataForPeriod(data, others, period, skipLast) {
                     percents,
                     scores,
                     previous,
-                    x => window.moment(x).startOf('month').toDate());
+                    x => window.moment.utc(x).startOf('month').format('YYYY-MM-DD'));
                 previous = x;
                 break;
             case "Day":
@@ -204,7 +204,7 @@ function groupDataPointsByPeriod(data,
     } else {
         var periodForPreviousDate = periodGrouper(previous);
 
-        if (periodForThisDate.toDateString() !== periodForPreviousDate.toDateString()) {
+        if (periodForThisDate !== periodForPreviousDate) {
             dateLabels.push(periodForThisDate);
             isNewPeriod = true;
         }
@@ -271,6 +271,52 @@ function onSkipLastChange() {
     togglePeriod(document.hntrendstore.CurrentCategory);
 }
 
+function plotCurrentMode(data, trendType) {
+    var element = getPlotlyElement();
+    window.Plotly.newPlot(element,
+        getPlotlyData(data, trendType, document.hntrendstore.CurrentCategory),
+        getPlotlyLayout(data, trendType, document.hntrendstore.CurrentCategory),
+        getModeBarSettings());
+
+    element.on('plotly_click',
+        function (data) {
+            if (!data.points || data.points.length === 0) {
+                return;
+            }
+
+            var point = data.points[0];
+            var date = point.x;
+            var series = point.data.name;
+
+            var grouping = document.hntrendstore.CurrentCategory;
+
+            $.get(`/api/single/${grouping}/${date}/${encodeURIComponent(series)}?allWords=${false}`)
+                .done(data => {
+                    $('#modal-table-body').empty();
+                    for (var i = 0; i < data.results.length; i++) {
+                        var item = data.results[i];
+                        var row = $("<tr>");
+                        var id = $("<td>").append($("<a>",
+                            {
+                                text: item.id,
+                                title: item.title,
+                                href: `https://news.ycombinator.com/item?id=${item.id}`,
+                                target: '_blank'
+                            }));
+                        row.append(id).append($("<td>").text(item.title)).append($('<td>').text(item.score))
+                            .append($('<td>').text(item.time));
+                        $('#modal-table-body').append(row);
+                    }
+                    $('#modal-wrapper').show();
+                    $('#modal').click();
+                })
+                .fail(err => {
+                    console.log(err);
+                    alert('An error occurred, please check the log.');
+                });
+        });
+}
+
 function togglePeriod(period) {
     document.hntrendstore.CurrentCategory = period;
 
@@ -281,11 +327,8 @@ function togglePeriod(period) {
         document.hntrendstore.others,
         document.hntrendstore.CurrentCategory,
         getSkipLast());
-    
-    window.Plotly.newPlot(getPlotlyElement(),
-        getPlotlyData(data, trendType, document.hntrendstore.CurrentCategory),
-        getPlotlyLayout(data, trendType, document.hntrendstore.CurrentCategory),
-        getModeBarSettings());
+
+    plotCurrentMode(data, trendType);
 }
 
 function switchTrendType() {
@@ -301,17 +344,18 @@ function switchTrendType() {
         document.hntrendstore.others,
         document.hntrendstore.CurrentCategory,
         getSkipLast());
-    
-    window.Plotly.newPlot(getPlotlyElement(),
-        getPlotlyData(data, newTrendType, document.hntrendstore.CurrentCategory),
-        getPlotlyLayout(data, newTrendType, document.hntrendstore.CurrentCategory),
-        getModeBarSettings());
+
+    plotCurrentMode(data, newTrendType);
 }
 
 function addDataPlot(data) {
     document.hntrendstore.others.push(data);
     togglePeriod(document.hntrendstore.CurrentCategory);
 }
+
+$("#modal-background").click(() => {
+    $('#modal-wrapper').hide();
+});
 
 $("#add-term").click(() => {
     var term = $("#text").val().trim();
@@ -372,20 +416,13 @@ $(function () {
 
     $("#period").text(document.hntrendstore.CurrentCategory);
 
-    var shouldSkipLast = window.moment().date() < 10;
-
-    if (shouldSkipLast) {
-        $("#skiplast").click();
-    }
+    $("#skiplast").click();
 
     $("#skiplast").on('change', onSkipLastChange);
 
     var json = loadDataFromHiddenInput();
 
     var data = dataForPeriod(json, [], document.hntrendstore.CurrentCategory, getSkipLast());
-    
-    window.Plotly.plot(getPlotlyElement(),
-        getPlotlyData(data, count, document.hntrendstore.CurrentCategory),
-        getPlotlyLayout(data, count, document.hntrendstore.CurrentCategory),
-        getModeBarSettings());
+
+    plotCurrentMode(data, count);
 });

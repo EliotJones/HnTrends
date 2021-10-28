@@ -23,5 +23,7 @@
         public double Rank { get; set; }
 
         public int Score { get; set; }
+
+        public DateTime Time { get; set; }
     }
 }

@@ -4,6 +4,7 @@
     ViewData["Title"] = $"Trend: {Model.Term}";
 }
 
+
 @if (Model.MaxCount == 0)
 {
     <h3>No data in series</h3>
@@ -35,15 +36,15 @@ else
     </label>
 
     <div id="plot"></div>
-    
+
     <div id="add-term-container">
         <label for="text">Add another trend:</label>
-        <input name="text" type="text" id="text" title="Add another search term to compare trends"/>
+        <input name="text" type="text" id="text" title="Add another search term to compare trends" />
         <button id="add-term" type="button" title="Add this search term to the plot">Add</button>
         <span id="loading" style="display: none">Loading...</span>
         <label for="allwords" class="setting-checkbox-label" id="allwords-label" title="Title must contain all words.">
             Search result must match all words:
-            <input type="checkbox" name="allwords" id="allwords" value="true" checked/>
+            <input type="checkbox" name="allwords" id="allwords" value="true" checked />
         </label>
     </div>
 
@@ -56,6 +57,28 @@ else
         </ul>
     </div>
 }
+
+<div id="modal-wrapper" style="position: fixed; left: 0; width: 100%; height: 100%; top: 0; display: none">
+    <div id="modal-inner" style="position: relative; width: 100%; height: 100%; padding-top: 20vh">
+        <div id="modal-background" style="position: absolute; left: 0; width: 100%; height: 100%; top: 0; opacity: 0.3; background: #525252"></div>
+        <div id="modal" 
+             style="background: white; width: 80%; height: 700px; position: relative; margin-left: auto; margin-right: auto; box-shadow: 0 3px 10px rgb(0 0 0 / 0.2); padding: 20px; overflow: auto; display: flex; justify-content: center">
+            <table style="display: table">
+                <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Title</th>
+                    <th>Score</th>
+                    <th>Date</th>
+                </tr>
+                </thead>
+                <tbody id="modal-table-body">
+
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 
 @section Scripts {
