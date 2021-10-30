@@ -269,3 +269,9 @@ __pycache__/
 # Data
 Index/
 data/
+
+# Fable generated files
+.fable
+*.fs.js
+bundle.js
+temp/**
