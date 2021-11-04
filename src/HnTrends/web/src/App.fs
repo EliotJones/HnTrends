@@ -6,12 +6,14 @@ open System.Collections.Generic
 open System.Text.RegularExpressions
 open Fetch
 open System
+open Fable.MomentJs.MomentJs
 
 type TermData =
     abstract counts : int []
     abstract scores : int []
     abstract term : string
     abstract allWords : bool
+    abstract start : DateTime
 
 type QueryTerm =
     { mutable Term: string
@@ -67,7 +69,7 @@ let private collectTerms (query: IDictionary<string, string>) =
 
 
 let parsed =
-    System.Uri(window.location.toString ())
+    Uri(window.location.toString ())
     |> Util.UriParse
     |> collectTerms
 
@@ -77,34 +79,58 @@ let myButton =
 
 
 let loadSingleSeries (term: QueryTerm) =
-    let url =
-        $"/api/plot/{term.Term}?allWords={term.AllWords}"
+    promise {
+        let url =
+            $"/api/plot/{term.Term}?allWords={term.AllWords}"
 
-    let resultPromise =
-        fetch url []
-        |> Promise.bind (fun response ->
-            let arr = response.json<TermData> ()
-            arr)
-        |> Promise.map (Ok)
-        |> Promise.catch (Error)
+        let! plotDataResult = tryFetch url []
 
-    resultPromise
+        match plotDataResult with
+        | Ok resp ->
+            let! termData = resp.json<TermData> ()
+            return Ok termData
+        | Error ex -> return Error ex
+    }
 
-let filterOutErrors (input: Result<TermData, exn>) =
-    match input with
-    | Ok v -> true
-    | _ -> false
+let generateSeries (rawSeries: TermData array) =
+    let first = rawSeries.[0]
+
+    let initialDate = moment.utc first.start
+
+    let days =
+        [ 0 .. first.counts.Length ]
+        |> Seq.map (fun i ->
+            let output =
+                (moment.utc initialDate).add ((float i), "days")
+
+            output)
+        |> Seq.toArray
+
+    console.log (days)
+    ()
+
+
+let generateSeriesFromPromise (loadingPromise: Fable.Core.JS.Promise<Result<TermData, Exception> array>) =
+    promise {
+        let! allData = loadingPromise
+
+        let successValues =
+            allData
+            |> Array.choose (fun r ->
+                match r with
+                | Ok ok -> Some ok
+                | Error _ -> None)
+
+        console.log (successValues)
+        generateSeries (successValues)
+    }
 
 let dataArrays =
     parsed
     |> Seq.map (fun term -> loadSingleSeries term.Value)
     |> Promise.Parallel
-    |> Promise.tap (fun allData ->
-        let values, err =
-            allData |> Array.partition filterOutErrors
 
-        let principle = values.[0]
-        ())
+ignore (generateSeriesFromPromise (dataArrays))
 
 // Register our listener
 myButton.onclick <-

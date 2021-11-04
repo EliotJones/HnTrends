@@ -1,5 +1,6 @@
 ﻿namespace HnTrends.ViewModels
 {
+    using System;
     using System.Collections.Generic;
 
     public class PlotAggregateDataViewModel
@@ -11,5 +12,7 @@
         public string Term { get; set; }
 
         public bool AllWords { get; set; }
+
+        public DateTime Start { get; set; }
     }
 }

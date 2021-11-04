@@ -72,7 +72,8 @@
                 Counts = results.Counts,
                 Term = originalTerm,
                 AllWords = allWords,
-                Scores = results.Scores
+                Scores = results.Scores,
+                Start = results.Start
             });
         }
 
