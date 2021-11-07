@@ -19,6 +19,12 @@ type QueryTerm =
     { mutable Term: string
       mutable AllWords: bool }
 
+type Interval =
+    | Day
+    | Week
+    | Month
+    | Year
+
 // Mutable variable to count the number of times we clicked the button
 let mutable count = 0
 
@@ -92,21 +98,59 @@ let loadSingleSeries (term: QueryTerm) =
         | Error ex -> return Error ex
     }
 
-let generateSeries (rawSeries: TermData array) =
+let generateSeries (rawSeries: TermData array, interval: Interval) =
     let first = rawSeries.[0]
 
-    let initialDate = moment.utc first.start
+    let earliestDate = moment.utc first.start
 
-    let days =
-        [ 0 .. first.counts.Length ]
+    let periodOfTime =
+        match interval with
+        | Day -> "day"
+        | Week -> "week"
+        | Month -> "month"
+        | Year -> "year"
+
+    let initialDate =
+        earliestDate.clone().startOf (periodOfTime)
+
+    let latestDate =
+        earliestDate
+            .clone()
+            .add ((float (first.counts.Length + 1)), "days")
+
+    let bucketCount =
+        int (ceil (latestDate.diff (earliestDate, periodOfTime)))
+
+    console.log (
+        "There are",
+        bucketCount,
+        periodOfTime,
+        "between",
+        initialDate.format ("YYYY-MM-DD"),
+        latestDate.format ("YYYY-MM-DD")
+    )
+
+    let dateBuckets =
+        [ 0 .. bucketCount ]
         |> Seq.map (fun i ->
+            let increment =
+                match interval with
+                | Day -> "days"
+                | Week -> "weeks"
+                | Month -> "months"
+                | Year -> "years"
+
             let output =
-                (moment.utc initialDate).add ((float i), "days")
+                (moment.utc initialDate)
+                    .add ((float i), increment)
 
             output)
         |> Seq.toArray
 
-    console.log (days)
+    console.log (dateBuckets)
+
+    // Next up let's split each series into the corresponding date buckets based on the active
+    // count type and then plot them.
     ()
 
 
@@ -121,8 +165,7 @@ let generateSeriesFromPromise (loadingPromise: Fable.Core.JS.Promise<Result<Term
                 | Ok ok -> Some ok
                 | Error _ -> None)
 
-        console.log (successValues)
-        generateSeries (successValues)
+        generateSeries (successValues, Month)
     }
 
 let dataArrays =
