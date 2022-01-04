@@ -150,7 +150,7 @@
 
             var termHasDotPrefix = trimmedTerm.Length > 0 && trimmedTerm[0] == '.';
 
-            var sql = "SELECT st.time, s.score FROM search_target as st INNER JOIN story as s ON s.id = st.id WHERE st.title MATCH @query";
+            var sql = "SELECT s.time, s.score FROM search_target as st INNER JOIN story as s ON s.id = st.id WHERE st.title MATCH @query";
 
             if (termHasDotPrefix)
             {
@@ -200,7 +200,7 @@
             var termHasDotPrefix = trimmedTerm.Length > 0 && trimmedTerm[0] == '.';
 
             var sql = @"  
-                    SELECT s.id, s.title, s.url, bm25(search_target), s.score, st.time FROM search_target as st
+                    SELECT s.id, s.title, s.url, bm25(search_target), s.score, s.time FROM search_target as st
                     INNER JOIN story as s
                     ON s.id = st.id
                     WHERE st.title MATCH @query";
@@ -212,12 +212,12 @@
 
             if (startDateInclusive.HasValue)
             {
-                sql += " AND st.time >= @startDate";
+                sql += " AND s.time >= @startDate";
             }
 
             if (endDateExclusive.HasValue)
             {
-                sql += " AND st.time < @endDate";
+                sql += " AND s.time < @endDate";
             }
 
             await using var connection = connectionFactory.Open();

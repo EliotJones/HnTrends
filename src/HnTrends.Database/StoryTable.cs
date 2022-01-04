@@ -18,7 +18,7 @@ namespace HnTrends.Database
             var command = new SqliteCommand(@"INSERT OR IGNORE INTO story(id, title, url, time) 
 VALUES(@id, @title, @url, @time);
 
-INSERT INTO search_target(id, title) VALUES (@id, @title);", 
+INSERT INTO search_target(id, title, time) VALUES (@id, @title, @time);", 
                 connection, transaction);
 
             command.Parameters.AddWithValue("id", entry.Id);
